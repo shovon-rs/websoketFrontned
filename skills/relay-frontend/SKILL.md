@@ -28,6 +28,40 @@ For a narrow visual or copy change, inspect the affected source and consult the 
 - Keep browser-dependent code in Client Components. Do not access `window`, storage, media, notification, geolocation, or WebSocket APIs during server rendering.
 - Prefer typed domain models over untyped objects. Do not introduce `any` when a stable event or API shape can be described.
 
+## Integration Layer (already built — reuse it)
+
+The app is wired to a real backend (see `../websoketBackend`, its `realtime-backend`
+skill documents the server side). Don't create parallel API/WS clients — these exist:
+
+- `src/lib/config.ts` — `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_WS_URL` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY`.
+- `src/lib/api-client.ts` — low-level `apiRequest()`: in-memory access token, `credentials: "include"`
+  for the HttpOnly refresh cookie, auto-refresh-and-retry once on a 401. `src/lib/api/*.api.ts`
+  has one thin resource module per backend module (`auth`, `chat`, `notifications`, `dashboard`,
+  `tracking`, `calls`, `documents`, `users`, `push`) — add new endpoints there, not inline in pages.
+- `src/lib/auth-context.tsx` — `useAuth()`: `status` (`loading`/`authenticated`/`unauthenticated`),
+  `user`, `login`/`register`/`logout`. Does a silent refresh on first load to restore the session
+  from the cookie. `AppShell` already redirects to `/login` when unauthenticated — protected pages
+  get this for free by rendering inside `AppShell`.
+- `src/lib/ws-client.ts` + `src/lib/ws-context.tsx` — `useWs()`: `{ status, send, subscribe }`.
+  One socket for the whole app, exponential-backoff reconnect (capped 30s), eventId dedup built in.
+  **Room membership lives on the connection, not the client** — any page that joins a WS room
+  (`chat:join`, `dashboard:join`, `tracking:join`, `document:join`) must re-send that join whenever
+  `status` transitions to `"connected"`, not just once on mount, or it silently stops receiving
+  broadcasts after a reconnect. See `chat/[id]/page.tsx` or `dashboard/page.tsx` for the pattern.
+- `src/lib/use-webrtc.ts` — `useWebRTCCall({ callId, isCaller, callType })` owns the
+  `RTCPeerConnection`, local/remote `MediaStream`, mute/camera/screen-share, and the full
+  offer/answer/ICE signaling exchange (including buffering ICE candidates that arrive before
+  the remote description is set). `components/IncomingCallBanner.tsx` (mounted globally in
+  `Providers.tsx`) is what surfaces `call:ringing` while the user is anywhere else in the app —
+  don't add a second listener for it.
+- `src/lib/push.ts` — Web Push subscribe/unsubscribe against `public/sw.js`.
+
+Backend contract notes that don't match `backend.md`'s illustrative snippets:
+refresh tokens are an HttpOnly cookie (not a JSON field — see the backend skill's
+"cookie-based refresh tokens" section), and starting a call must go through the WS
+`call:initiate` event, not `POST /api/calls` (that REST endpoint creates a call row but
+does not notify the callee — only the WS path does).
+
 ## Realtime Integration
 
 When connecting the UI to the backend, preserve the standard event envelope:
