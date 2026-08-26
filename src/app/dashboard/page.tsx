@@ -11,15 +11,18 @@ import * as dashboardApi from "@/lib/api/dashboard.api";
 import type { DashboardMetrics } from "@/lib/types";
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { status: authStatus, user } = useAuth();
   const { status: wsStatus, send, subscribe } = useWs();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
 
+  // AppShell redirects to /login when unauthenticated, but it still renders this component's
+  // effects on the way there — wait for a real session so we don't fire a doomed request.
   useEffect(() => {
+    if (authStatus !== "authenticated") return;
     dashboardApi.getSummary().then((summary) =>
       setMetrics({ activeConnections: summary.activeConnections, onlineUsers: summary.activeConnections, generatedAt: summary.generatedAt }),
     );
-  }, []);
+  }, [authStatus]);
 
   // Re-join on every (re)connect — room membership lives on the server connection, not the client.
   useEffect(() => {

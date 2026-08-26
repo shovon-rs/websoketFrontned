@@ -1,16 +1,17 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
-import { Info, Paperclip, Phone, Search, Send, Smile, Video } from "lucide-react";
+import { UserSearchDropdown } from "@/components/UserSearchDropdown";
+import { Info, Paperclip, Phone, Search, Send, Smile, Video, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as chatApi from "@/lib/api/chat.api";
-import * as usersApi from "@/lib/api/users.api";
 import { useAuth } from "@/lib/auth-context";
 import { useWs } from "@/lib/ws-context";
 import { makeEventId } from "@/lib/ws-envelope";
-import type { Conversation, Message } from "@/lib/types";
+import { ApiError } from "@/lib/api-client";
+import type { Conversation, Message, User } from "@/lib/types";
 
 const PALETTE = ["coral", "blue", "violet", "gold", "green"];
 function colorFor(id: string): string {
@@ -37,7 +38,8 @@ export default function ChatConversation({ params }: { params: { id: string } })
   const [text, setText] = useState("");
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [newConvoOpen, setNewConvoOpen] = useState(false);
-  const [newConvoEmail, setNewConvoEmail] = useState("");
+  const [creatingConvo, setCreatingConvo] = useState(false);
+  const [convoError, setConvoError] = useState<string | null>(null);
 
   const lastEventIdRef = useRef<string | undefined>(undefined);
   const typingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -185,14 +187,19 @@ export default function ChatConversation({ params }: { params: { id: string } })
     typingStopTimerRef.current = setTimeout(() => send("typing:stop", { conversationId }), 3000);
   }
 
-  async function startConversation() {
-    const [match] = await usersApi.searchUsers(newConvoEmail);
-    if (!match) return;
-    const conversation = await chatApi.createConversation({ memberIds: [match.id], type: "direct" });
-    setConversations((prev) => (prev.some((c) => c.id === conversation.id) ? prev : [conversation, ...prev]));
-    setNewConvoOpen(false);
-    setNewConvoEmail("");
-    router.push(`/chat/${conversation.id}`);
+  async function startConversation(recipient: User) {
+    setConvoError(null);
+    setCreatingConvo(true);
+    try {
+      const conversation = await chatApi.createConversation({ memberIds: [recipient.id], type: "direct" });
+      setConversations((prev) => (prev.some((c) => c.id === conversation.id) ? prev : [conversation, ...prev]));
+      setNewConvoOpen(false);
+      router.push(`/chat/${conversation.id}`);
+    } catch (err) {
+      setConvoError(err instanceof ApiError ? err.message : "Could not start the conversation. Please try again.");
+    } finally {
+      setCreatingConvo(false);
+    }
   }
 
   const typingNames = Array.from(typingUsers).map((id) => memberById.get(id)?.displayName.split(" ")[0] ?? "Someone");
@@ -200,10 +207,10 @@ export default function ChatConversation({ params }: { params: { id: string } })
   return <AppShell title="Messages"><div className="chat-layout">
     <aside className="conversation-panel">
       <div className="filter-search"><Search size={17}/><input placeholder="Search conversations"/></div>
-      <div className="conv-heading"><strong>All messages</strong><button onClick={() => setNewConvoOpen((v) => !v)}>+</button></div>
-      {newConvoOpen && <div className="filter-search" style={{ marginBottom: 10 }}>
-        <input placeholder="Start chat with email…" value={newConvoEmail} onChange={(e) => setNewConvoEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && startConversation()} />
-        <button onClick={startConversation}><Send size={15}/></button>
+      <div className="conv-heading"><strong>All messages</strong><button onClick={() => { setNewConvoOpen((v) => !v); setConvoError(null); }} aria-label={newConvoOpen ? "Close new conversation" : "Start a new conversation"}>{newConvoOpen ? <X size={16}/> : "+"}</button></div>
+      {newConvoOpen && <div style={{ marginBottom: 12 }}>
+        <UserSearchDropdown onSelect={startConversation} placeholder="Search people by name or email…" autoFocus disabled={creatingConvo} />
+        {convoError && <p className="auth-error" style={{ marginTop: 8 }}>{convoError}</p>}
       </div>}
       {conversations.map((c) => {
         const other = c.members.find((m) => m.userId !== user?.id)?.user;

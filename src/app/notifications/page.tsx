@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { Bell, BellRing, Check, FileText, MessageCircle, PhoneIncoming, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import * as notificationsApi from "@/lib/api/notifications.api";
+import { useAuth } from "@/lib/auth-context";
 import { useWs } from "@/lib/ws-context";
 import { subscribePush, isPushSupported } from "@/lib/push";
 import type { AppNotification } from "@/lib/types";
@@ -31,15 +32,19 @@ function timeAgo(iso: string): string {
 }
 
 export default function Notifications() {
+  const { status: authStatus } = useAuth();
   const { subscribe } = useWs();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [pushState, setPushState] = useState<"idle" | "enabling" | "enabled" | "unsupported" | "error">(
     isPushSupported() ? "idle" : "unsupported",
   );
 
+  // AppShell redirects to /login when unauthenticated, but it still renders this component's
+  // effects on the way there — wait for a real session so we don't fire a doomed request.
   useEffect(() => {
+    if (authStatus !== "authenticated") return;
     notificationsApi.listNotifications().then(setItems);
-  }, []);
+  }, [authStatus]);
 
   useEffect(() => {
     return subscribe("notification:new", (event) => {
