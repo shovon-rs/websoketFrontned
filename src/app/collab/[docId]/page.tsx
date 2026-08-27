@@ -1,7 +1,7 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
-import { Bold, Italic, Link as LinkIcon, List, MessageSquare, Redo, Share2, Undo } from "lucide-react";
+import { Bold, Check, Copy, Italic, Link as LinkIcon, List, MessageSquare, Redo, Share2, Undo, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -19,6 +19,9 @@ export default function Collab({ params }: { params: { docId: string } }) {
   const [title, setTitle] = useState("Untitled document");
   const [saved, setSaved] = useState(true);
   const [collaborators, setCollaborators] = useState<string[]>([]);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
   const articleRef = useRef<HTMLDivElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const applyingRemoteRef = useRef(false);
@@ -88,9 +91,33 @@ export default function Collab({ params }: { params: { docId: string } }) {
     }, SAVE_DEBOUNCE_MS);
   }
 
+  async function copyShareLink() {
+    setShareError(null);
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setShareError("Could not copy the link. Select it and copy it manually.");
+    }
+  }
+
+  async function shareDocument() {
+    if (!navigator.share) {
+      await copyShareLink();
+      return;
+    }
+    try {
+      await navigator.share({ title, text: `Collaborate with me on “${title}”`, url: window.location.href });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setShareError("This device could not open the share menu. You can copy the link instead.");
+    }
+  }
+
   if (!docId) return <AppShell title="Documents"><div className="page">Creating your document…</div></AppShell>;
 
-  return <AppShell title="Documents" actions={<button className="primary small"><Share2/> Share</button>}>
+  return <AppShell title="Documents" actions={<button className="primary small" onClick={() => { setShareOpen(true); setCopied(false); setShareError(null); }}><Share2/> Share</button>}>
     <div className="editor-shell">
       <div className="editor-top">
         <div><input value={title} onChange={(e) => { setTitle(e.target.value); onEdit(); }}/><small><i/> {saved ? "Saved" : "Saving…"}</small></div>
@@ -102,5 +129,13 @@ export default function Collab({ params }: { params: { docId: string } }) {
       </article>
       <aside className="comment-bubble"><MessageSquare/><span><strong>Tip</strong><small>Edits sync live to everyone viewing this document.</small></span></aside>
     </div>
+    {shareOpen && <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}>
+      <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="share-title">
+        <header><div><h2 id="share-title">Share document</h2><p>Anyone signed in with this link can view and edit this document.</p></div><button onClick={() => setShareOpen(false)} aria-label="Close share dialog"><X size={18}/></button></header>
+        <label>Document link<div><input value={typeof window === "undefined" ? "" : window.location.href} readOnly onFocus={(event) => event.currentTarget.select()}/><button onClick={copyShareLink}>{copied ? <Check size={16}/> : <Copy size={16}/>} {copied ? "Copied" : "Copy"}</button></div></label>
+        {shareError && <p className="share-error" role="alert">{shareError}</p>}
+        {typeof navigator !== "undefined" && typeof navigator.share === "function" && <button className="primary wide" onClick={shareDocument}><Share2 size={16}/> Share via another app</button>}
+      </section>
+    </div>}
   </AppShell>;
 }
