@@ -1,8 +1,13 @@
 import { apiRequest } from "../api-client";
-import type { Call, CallType, IceServer } from "../types";
+import type { Call, CallHistoryEntry, CallType, IceServer } from "../types";
 
 export async function createCall(calleeId: string, callType: CallType) {
   return apiRequest<Call>("/calls", { method: "POST", body: { calleeId, callType } });
+}
+
+export async function listCalls() {
+  const data = await apiRequest<{ calls: CallHistoryEntry[] }>("/calls");
+  return data.calls;
 }
 
 export async function getCall(id: string) {

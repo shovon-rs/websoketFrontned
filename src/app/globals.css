@@ -269,6 +269,12 @@ button {
 	display: flex;
 	gap: 13px;
 	align-items: center;
+	text-decoration: none;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+a.metric:hover {
+	border-color: #c9d4cd;
+	box-shadow: 0 2px 10px #1a2d2112;
 }
 .metric-icon,
 .tiny-icon {

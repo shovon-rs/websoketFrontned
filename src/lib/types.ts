@@ -15,6 +15,16 @@ export type User = {
   avatarUrl?: string | null;
 };
 
+export type PresenceUser = {
+  id: string;
+  displayName: string;
+  email: string;
+  avatarUrl: string | null;
+  online: boolean;
+  onlineSince: string | null;
+  lastSeenAt: string | null;
+};
+
 export type ConversationMember = {
   id: string;
   userId: string;
@@ -107,6 +117,25 @@ export type Call = {
   status: CallStatus;
   initiatorId: string;
   participants: CallParticipant[];
+};
+
+export type CallHistoryParticipant = {
+  userId: string;
+  role: "caller" | "callee";
+  joinedAt: string | null;
+  leftAt: string | null;
+  user: User;
+};
+
+export type CallHistoryEntry = {
+  id: string;
+  type: CallType;
+  status: CallStatus;
+  initiatorId: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  createdAt: string;
+  participants: CallHistoryParticipant[];
 };
 
 export type IceServer = {

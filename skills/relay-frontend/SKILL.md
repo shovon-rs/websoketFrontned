@@ -68,6 +68,18 @@ skill documents the server side). Don't create parallel API/WS clients — these
   nav, click-outside-to-close). This is the reusable building block for "pick a teammate" flows —
   used by chat's new-conversation flow, the call picker, and tracking's share-with flow. Reach for
   this instead of a raw email `<input>` any time a feature needs to target another user.
+- `src/lib/time.ts` — `formatOnlineDuration`/`formatLastSeen`, the Messenger-style "Online for
+  12m" / "Active 3h ago" strings. Backed by real data: `GET /api/users/presence`
+  (`users.api.ts`'s `getPresence()`) returns every other user with `online`, `onlineSince`
+  (set once per session, not reset on heartbeat — trust it), and `lastSeenAt` (only populated
+  once someone's *last* socket disconnects). The `/people` page is the reference consumer —
+  online first (most-recent first), then offline (most-recently-seen first); the backend
+  already sorts it that way, don't re-sort client-side.
+- Dashboard metrics that look like they need a WS event usually don't — `GET /dashboard/summary`
+  (`conversationCount`, `activeConnections`) and `GET /dashboard/message-activity` (real daily
+  message counts, last 7 days, scoped to the caller's own conversations) are plain REST polls on
+  mount; only `activeConnections`'s live tick comes over WS (`dashboard:metrics`, already wired).
+  Don't invent a new WS event for a number that's fine fetched once per page load.
 
 Live tracking is a real multi-user feature, not a solo demo: a session owner can share their
 live location with specific teammates (`tracking.api.ts`'s `addViewer`/`removeViewer`, picked via
