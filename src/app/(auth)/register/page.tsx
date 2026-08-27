@@ -21,6 +21,11 @@ export default function Register() {
 		const displayName = String(form.get("displayName") ?? "");
 		const email = String(form.get("email") ?? "");
 		const password = String(form.get("password") ?? "");
+		const confirmPassword = String(form.get("confirmPassword") ?? "");
+		if (password !== confirmPassword) {
+			setError("Passwords do not match.");
+			return;
+		}
 		setSubmitting(true);
 		try {
 			await register(email, password, displayName);
@@ -87,7 +92,17 @@ export default function Register() {
 							required
 						/>
 					</label>
-					{error && <p className="auth-error">{error}</p>}
+					<label>
+						Confirm password
+						<PasswordField
+							name="confirmPassword"
+							placeholder="Enter your password again"
+							minLength={8}
+							autoComplete="new-password"
+							required
+						/>
+					</label>
+					{error && <p className="auth-error" role="alert">{error}</p>}
 					<button className="primary wide" disabled={submitting}>
 						{submitting ? "Creating account…" : "Create account"}
 					</button>
