@@ -52,14 +52,13 @@ export default function Dashboard() {
       <section className="card activity-chart"><div className="card-head"><div><h3>Message activity</h3><p>{totalMessages !== null ? `${totalMessages} messages across your conversations, last 7 days` : "Loading…"}</p></div></div>{chartData ? <Chart data={chartData}/> : <p className="quiet">Loading message activity…</p>}</section>
       <section className="card live-now"><div className="card-head"><div><h3>Live now</h3><p>Active connections across the workspace</p></div><span className="live-pill"><i/> {metrics?.activeConnections ?? 0} connections</span></div><div className="people-stack"><Avatar initials={user ? user.displayName.slice(0, 2).toUpperCase() : "?"} color="green" online src={user?.avatarUrl}/></div><p className="quiet">Updates every few seconds from the live dashboard channel.</p><Link className="text-link" href="/people">See who's online <ArrowUpRight size={16}/></Link></section>
     </div>
-    <div className="dashboard-grid bottom">
-      <section className="card recent"><div className="card-head"><div><h3>Quick actions</h3><p>Jump right back in</p></div></div>
-        <Link href="/chat"><MessageCircle/><span><strong>Messages</strong><small>Open your conversations</small></span><ArrowUpRight/></Link>
-        <Link href="/call/team-sync"><Phone/><span><strong>Start a call</strong><small>Audio or video</small></span><ArrowUpRight/></Link>
-        <Link href="/collab/new"><FileText/><span><strong>Create document</strong><small>Collaborate in real time</small></span><ArrowUpRight/></Link>
-        <Link href="/tracking"><MapPin/><span><strong>Share location</strong><small>Start live tracking</small></span><ArrowUpRight/></Link>
-      </section>
-      <section className="card quick"><div className="card-head"><div><h3>Quick actions</h3><p>Jump right back in</p></div></div></section>
-    </div>
+    <section className="card quick-actions"><div className="card-head"><div><h3>Quick actions</h3><p>Start something or jump back into your work</p></div></div>
+      <div className="quick-actions-grid">
+        <Link href="/chat"><span className="quick-action-icon coral"><MessageCircle/></span><span><strong>Messages</strong><small>Open your conversations</small></span><ArrowUpRight/></Link>
+        <Link href="/call/team-sync"><span className="quick-action-icon violet"><Phone/></span><span><strong>Start a call</strong><small>Connect by audio or video</small></span><ArrowUpRight/></Link>
+        <Link href="/collab/new"><span className="quick-action-icon blue"><FileText/></span><span><strong>Create document</strong><small>Collaborate in real time</small></span><ArrowUpRight/></Link>
+        <Link href="/tracking"><span className="quick-action-icon green"><MapPin/></span><span><strong>Share location</strong><small>Start secure live tracking</small></span><ArrowUpRight/></Link>
+      </div>
+    </section>
   </div></AppShell>;
 }
