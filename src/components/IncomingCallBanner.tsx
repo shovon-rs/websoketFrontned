@@ -1,8 +1,9 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Phone, PhoneOff, Video } from "lucide-react";
 import { useWs } from "@/lib/ws-context";
+import { startRingtone } from "@/lib/sound";
 
 interface IncomingCall {
   callId: string;
@@ -14,6 +15,7 @@ export function IncomingCallBanner() {
   const router = useRouter();
   const { subscribe, send } = useWs();
   const [incoming, setIncoming] = useState<IncomingCall | null>(null);
+  const stopRingtoneRef = useRef<(() => void) | null>(null);
 
   useEffect(() => subscribe("call:ringing", (event) => setIncoming(event.payload as IncomingCall)), [subscribe]);
 
@@ -21,6 +23,17 @@ export function IncomingCallBanner() {
     const offEnd = subscribe("call:end", () => setIncoming(null));
     return offEnd;
   }, [subscribe]);
+
+  // Ring for as long as there's an unanswered incoming call, and only then.
+  useEffect(() => {
+    if (incoming) {
+      stopRingtoneRef.current = startRingtone();
+    }
+    return () => {
+      stopRingtoneRef.current?.();
+      stopRingtoneRef.current = null;
+    };
+  }, [incoming?.callId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!incoming) return null;
 

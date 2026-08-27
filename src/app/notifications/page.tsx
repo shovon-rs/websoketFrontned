@@ -48,19 +48,8 @@ export default function Notifications() {
 
   useEffect(() => {
     return subscribe("notification:new", (event) => {
-      const payload = event.payload as { title: string; body: string; data?: Record<string, unknown> };
-      setItems((prev) => [
-        {
-          id: event.eventId,
-          type: "info",
-          title: payload.title,
-          body: payload.body,
-          data: payload.data,
-          readAt: null,
-          createdAt: event.timestamp,
-        },
-        ...prev,
-      ]);
+      const notification = event.payload as AppNotification;
+      setItems((prev) => (prev.some((n) => n.id === notification.id) ? prev : [notification, ...prev]));
     });
   }, [subscribe]);
 
