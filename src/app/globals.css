@@ -1068,6 +1068,89 @@ a.metric:hover {
 .narrow {
 	max-width: 880px;
 }
+.people-page {
+	display: grid;
+	gap: 18px;
+}
+.people-section {
+	padding: 0;
+	overflow: hidden;
+}
+.people-section > header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 18px 20px;
+	border-bottom: 1px solid var(--line);
+}
+.people-section h2 {
+	margin: 0;
+	font: 700 15px Manrope;
+}
+.people-section header p {
+	margin: 4px 0 0;
+	color: var(--muted);
+	font-size: 9px;
+}
+.people-section header > span {
+	display: grid;
+	place-items: center;
+	min-width: 27px;
+	height: 24px;
+	padding: 0 8px;
+	border-radius: 12px;
+	background: #edf3ef;
+	color: #315d50;
+	font-size: 10px;
+	font-weight: 700;
+}
+.people-list > button {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 13px 20px;
+	border: 0;
+	border-bottom: 1px solid #eff2ef;
+	background: #fff;
+	text-align: left;
+}
+.people-list > button:last-of-type {
+	border-bottom: 0;
+}
+.people-list > button:hover,
+.people-list > button:focus-visible {
+	background: #f7faf8;
+}
+.people-list > button:disabled {
+	opacity: 0.65;
+	cursor: wait;
+}
+.people-list > button > span:nth-child(2) {
+	flex: 1;
+	min-width: 0;
+}
+.people-list strong,
+.people-list small {
+	display: block;
+}
+.people-list strong {
+	font-size: 11px;
+}
+.people-list small {
+	margin-top: 4px;
+	color: var(--muted);
+	font-size: 9px;
+}
+.people-list > button > svg {
+	color: #73847d;
+}
+.people-empty {
+	margin: 0;
+	padding: 22px 20px;
+	color: var(--muted);
+	font-size: 10px;
+}
 .notification-card {
 	padding: 0;
 }

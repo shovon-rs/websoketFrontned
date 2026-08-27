@@ -9,6 +9,7 @@ import { useWs } from "@/lib/ws-context";
 
 const nav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard }, { href: "/chat", label: "Messages", icon: MessageCircle },
+  { href: "/people", label: "People", icon: Users },
   { href: "/notifications", label: "Notifications", icon: Bell }, { href: "/tracking", label: "Live tracking", icon: MapPin },
   { href: "/collab/launch-plan", label: "Documents", icon: PanelsTopLeft }, { href: "/call/team-sync", label: "Calls", icon: Phone },
 ];

@@ -1,67 +1,89 @@
 "use client";
+
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
-import { useEffect, useState } from "react";
-import { useAuth } from "@/lib/auth-context";
+import { ApiError } from "@/lib/api-client";
+import * as chatApi from "@/lib/api/chat.api";
 import * as usersApi from "@/lib/api/users.api";
 import { formatLastSeen, formatOnlineDuration } from "@/lib/time";
 import type { PresenceUser } from "@/lib/types";
-
-const POLL_MS = 15000;
+import { useWs } from "@/lib/ws-context";
+import { MessageCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/);
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
-export default function People() {
-  const { status: authStatus } = useAuth();
-  const [users, setUsers] = useState<PresenceUser[] | null>(null);
+export default function PeoplePage() {
+  const router = useRouter();
+  const { status: wsStatus } = useWs();
+  const [people, setPeople] = useState<PresenceUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openingUserId, setOpeningUserId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // AppShell redirects to /login when unauthenticated, but it still renders this component's
-  // effects on the way there — wait for a real session so we don't fire a doomed request.
-  useEffect(() => {
-    if (authStatus !== "authenticated") return;
-
-    let cancelled = false;
-    function load() {
-      usersApi.getPresence().then((list) => {
-        if (!cancelled) setUsers(list);
-      });
+  const loadPeople = useCallback(async () => {
+    try {
+      const result = await usersApi.getPresence();
+      setPeople(result);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not load workspace members.");
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    load();
-    const timer = setInterval(load, POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [authStatus]);
+  useEffect(() => {
+    void loadPeople();
+    const timer = window.setInterval(loadPeople, 15000);
+    return () => window.clearInterval(timer);
+  }, [loadPeople]);
 
-  if (!users) return <AppShell title="People"><div className="page">Loading…</div></AppShell>;
+  useEffect(() => {
+    if (wsStatus === "connected") void loadPeople();
+  }, [wsStatus, loadPeople]);
 
-  const online = users.filter((u) => u.online);
-  const offline = users.filter((u) => !u.online);
+  async function openChat(person: PresenceUser) {
+    if (openingUserId) return;
+    setOpeningUserId(person.id);
+    setError(null);
+    try {
+      const conversation = await chatApi.createConversation({ memberIds: [person.id], type: "direct" });
+      router.push(`/chat/${conversation.id}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : `Could not open a chat with ${person.displayName}.`);
+      setOpeningUserId(null);
+    }
+  }
 
-  return <AppShell title="People" subtitle="See who's around right now.">
-    <div className="page narrow">
-      <section className="card">
-        <div className="card-head"><div><h3>Online — {online.length}</h3><p>Active right now</p></div></div>
-        {online.length === 0 && <p className="quiet" style={{ padding: "10px 0" }}>No one else is online right now.</p>}
-        {online.map((u) => <div className="activity-row" key={u.id}>
-          <Avatar initials={initialsOf(u.displayName)} color="green" online src={u.avatarUrl} size="sm" />
-          <div><strong>{u.displayName}</strong><small>{u.onlineSince ? formatOnlineDuration(u.onlineSince) : "Online"}</small></div>
-        </div>)}
-      </section>
+  const online = people.filter((person) => person.online);
+  const offline = people.filter((person) => !person.online);
 
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="card-head"><div><h3>Offline</h3><p>Not currently connected</p></div></div>
-        {offline.length === 0 && <p className="quiet" style={{ padding: "10px 0" }}>Everyone is online.</p>}
-        {offline.map((u) => <div className="activity-row" key={u.id}>
-          <Avatar initials={initialsOf(u.displayName)} color="blue" online={false} src={u.avatarUrl} size="sm" />
-          <div><strong>{u.displayName}</strong><small>{formatLastSeen(u.lastSeenAt)}</small></div>
-        </div>)}
-      </section>
+  return <AppShell title="People" subtitle="See who is available and start a conversation.">
+    <div className="page narrow people-page">
+      {error && <p className="auth-error" role="alert">{error}</p>}
+      {loading ? <section className="card"><p className="quiet">Loading people…</p></section> : <>
+        <PeopleSection title="Online" count={online.length} people={online} openingUserId={openingUserId} onOpenChat={openChat} />
+        <PeopleSection title="Offline" count={offline.length} people={offline} openingUserId={openingUserId} onOpenChat={openChat} />
+      </>}
     </div>
   </AppShell>;
+}
+
+function PeopleSection({ title, count, people, openingUserId, onOpenChat }: { title: "Online" | "Offline"; count: number; people: PresenceUser[]; openingUserId: string | null; onOpenChat: (person: PresenceUser) => void }) {
+  return <section className="card people-section">
+    <header><div><h2>{title}</h2><p>{title === "Online" ? "Available in the workspace now" : "Not currently connected"}</p></div><span>{count}</span></header>
+    <div className="people-list">
+      {people.map((person) => <button key={person.id} onClick={() => onOpenChat(person)} disabled={openingUserId !== null}>
+        <Avatar initials={initialsOf(person.displayName)} color={person.online ? "green" : "blue"} online={person.online} src={person.avatarUrl}/>
+        <span><strong>{person.displayName}</strong><small>{person.online && person.onlineSince ? formatOnlineDuration(person.onlineSince) : formatLastSeen(person.lastSeenAt)}</small></span>
+        <MessageCircle size={17}/>
+      </button>)}
+      {people.length === 0 && <p className="people-empty">No {title.toLocaleLowerCase()} people.</p>}
+    </div>
+  </section>;
 }
