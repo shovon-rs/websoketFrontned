@@ -23,6 +23,10 @@ export async function me() {
   return apiRequest<User>("/auth/me");
 }
 
+export async function updateProfile(input: { displayName: string }) {
+  return apiRequest<User>("/auth/me", { method: "PATCH", body: input });
+}
+
 export async function logout() {
   await apiRequest("/auth/logout", { method: "POST" });
   setAccessToken(null);

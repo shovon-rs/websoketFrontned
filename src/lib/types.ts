@@ -11,6 +11,8 @@ export type User = {
   email: string;
   displayName: string;
   role?: string;
+  createdAt?: string;
+  avatarUrl?: string | null;
 };
 
 export type ConversationMember = {

@@ -57,11 +57,13 @@ export async function refreshAccessToken(): Promise<string | null> {
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
+  /** For file uploads — sent as-is with no Content-Type set (the browser adds the multipart boundary). */
+  formData?: FormData;
   skipAuthRetry?: boolean;
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, skipAuthRetry = false } = options;
+  const { method = "GET", body, formData, skipAuthRetry = false } = options;
 
   const headers: Record<string, string> = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -71,7 +73,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     method,
     headers,
     credentials: "include",
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: formData ?? (body !== undefined ? JSON.stringify(body) : undefined),
   });
 
   if (res.status === 401 && !skipAuthRetry) {

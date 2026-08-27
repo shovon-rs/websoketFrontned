@@ -55,6 +55,11 @@ skill documents the server side). Don't create parallel API/WS clients — these
   `Providers.tsx`) is what surfaces `call:ringing` while the user is anywhere else in the app —
   don't add a second listener for it.
 - `src/lib/push.ts` — Web Push subscribe/unsubscribe against `public/sw.js`.
+- File uploads (e.g. avatar) go through `apiRequest`'s `formData` option (a `FormData`
+  instead of `body` — it's sent as-is with no `Content-Type` set so the browser adds the
+  multipart boundary itself; see `users.api.ts`'s `uploadAvatar`). The response is a
+  presigned, time-limited URL — don't cache it beyond the current session/reload, always use
+  whatever the API just returned (or a fresh `GET /auth/me`).
 - `src/components/TrackingMap.tsx` — real Leaflet + OpenStreetMap map (no API key needed).
   Imperative wrapper (`import("leaflet")` inside `useEffect`, never a static top-level import —
   Leaflet touches `window` at load time and breaks SSR otherwise). Takes a flat `markers` array
