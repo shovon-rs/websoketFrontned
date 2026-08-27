@@ -730,6 +730,43 @@ a.metric:hover {
 .thread-head button svg {
 	width: 17px;
 }
+.thread-head button:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+.message-search {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	padding: 10px 24px;
+	border-bottom: 1px solid var(--line);
+	background: #fff;
+	color: var(--muted);
+}
+.message-search input {
+	flex: 1;
+	min-width: 0;
+	border: 0;
+	outline: 0;
+	font-size: 11px;
+}
+.message-search small {
+	white-space: nowrap;
+	font-size: 9px;
+}
+.message-search button {
+	display: grid;
+	place-items: center;
+	border: 0;
+	background: transparent;
+	color: inherit;
+}
+.message-search-empty {
+	margin: 30px auto;
+	text-align: center;
+	color: var(--muted);
+	font-size: 11px;
+}
 .messages {
 	flex: 1;
 	min-height: 0;
@@ -820,9 +857,73 @@ a.metric:hover {
 }
 .composer {
 	flex: 0 0 auto;
+	position: relative;
 	border-top: 1px solid var(--line);
 	padding: 14px 24px;
 	background: #fff;
+}
+.attachment-chip {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	width: fit-content;
+	max-width: 100%;
+	margin-bottom: 9px;
+	padding: 7px 9px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #f7f9f7;
+}
+.attachment-chip span {
+	min-width: 0;
+}
+.attachment-chip strong,
+.attachment-chip small {
+	display: block;
+}
+.attachment-chip strong {
+	max-width: 260px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 10px;
+}
+.attachment-chip small {
+	margin-top: 2px;
+	font-size: 8px;
+	color: var(--muted);
+}
+.attachment-chip button {
+	display: grid;
+	place-items: center;
+}
+.composer-error {
+	margin: 0 0 8px;
+	color: #b44432;
+	font-size: 10px;
+}
+.emoji-picker {
+	position: absolute;
+	right: 66px;
+	bottom: 76px;
+	z-index: 5;
+	display: grid;
+	grid-template-columns: repeat(6, 34px);
+	gap: 3px;
+	padding: 8px;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: #fff;
+	box-shadow: 0 10px 30px #1a2d2120;
+}
+.emoji-picker button {
+	width: 34px;
+	height: 34px;
+	border-radius: 6px;
+	font-size: 18px;
+}
+.emoji-picker button:hover {
+	background: #f1f5f2;
 }
 .composer > div {
 	height: 48px;
@@ -864,6 +965,17 @@ a.metric:hover {
 	font-size: 8px;
 	color: #a0a7a3;
 	margin-top: 6px;
+}
+.visually-hidden {
+	position: absolute !important;
+	width: 1px !important;
+	height: 1px !important;
+	padding: 0 !important;
+	margin: -1px !important;
+	overflow: hidden !important;
+	clip: rect(0, 0, 0, 0) !important;
+	white-space: nowrap !important;
+	border: 0 !important;
 }
 .narrow {
 	max-width: 880px;

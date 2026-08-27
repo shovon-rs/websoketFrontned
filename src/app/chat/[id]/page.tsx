@@ -2,7 +2,7 @@
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { UserSearchDropdown } from "@/components/UserSearchDropdown";
-import { Info, Paperclip, Phone, Search, Send, Smile, Video, X } from "lucide-react";
+import { FileText, Info, Paperclip, Phone, Search, Send, Smile, Video, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -40,8 +40,15 @@ export default function ChatConversation({ params }: { params: { id: string } })
   const [newConvoOpen, setNewConvoOpen] = useState(false);
   const [creatingConvo, setCreatingConvo] = useState(false);
   const [convoError, setConvoError] = useState<string | null>(null);
+  const [messageSearchOpen, setMessageSearchOpen] = useState(false);
+  const [messageSearch, setMessageSearch] = useState("");
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [composerError, setComposerError] = useState<string | null>(null);
+  const [dialing, setDialing] = useState<"audio" | "video" | null>(null);
 
   const lastEventIdRef = useRef<string | undefined>(undefined);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const lastTypingSentRef = useRef(0);
   const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,7 +166,28 @@ export default function ChatConversation({ params }: { params: { id: string } })
     };
   }, [conversationId, subscribe, send, user]);
 
+  useEffect(() => {
+    if (!dialing) return undefined;
+    const offInitiated = subscribe("call:initiated", (event) => {
+      setDialing(null);
+      router.push(`/call/${(event.payload as { callId: string }).callId}`);
+    });
+    const offError = subscribe("error", (event) => {
+      setDialing(null);
+      setComposerError(event.error?.message ?? "Could not start the call. Please try again.");
+    });
+    const timeout = setTimeout(() => {
+      setDialing(null);
+      setComposerError("The call could not be started. Check your connection and try again.");
+    }, 15000);
+    return () => { offInitiated(); offError(); clearTimeout(timeout); };
+  }, [dialing, router, subscribe]);
+
   const sendMessage = useCallback(() => {
+    if (attachment) {
+      setComposerError("File upload is not available on the server yet. Remove the file to send your message.");
+      return;
+    }
     if (!text.trim() || !user) return;
     const eventId = makeEventId();
     const optimistic: Message = {
@@ -174,7 +202,16 @@ export default function ChatConversation({ params }: { params: { id: string } })
     setMessages((prev) => [...prev, optimistic]);
     send("message:send", { conversationId, content: text }, eventId);
     setText("");
-  }, [text, user, conversationId, send]);
+    setEmojiOpen(false);
+    setComposerError(null);
+  }, [attachment, text, user, conversationId, send]);
+
+  function startCall(callType: "audio" | "video") {
+    if (!otherMember || dialing) return;
+    setComposerError(null);
+    setDialing(callType);
+    send("call:initiate", { calleeId: otherMember.id, callType });
+  }
 
   function onTyping(value: string) {
     setText(value);
@@ -203,6 +240,10 @@ export default function ChatConversation({ params }: { params: { id: string } })
   }
 
   const typingNames = Array.from(typingUsers).map((id) => memberById.get(id)?.displayName.split(" ")[0] ?? "Someone");
+  const normalizedSearch = messageSearch.trim().toLocaleLowerCase();
+  const visibleMessages = normalizedSearch
+    ? messages.filter((message) => message.content.toLocaleLowerCase().includes(normalizedSearch))
+    : messages;
 
   return <AppShell title="Messages"><div className="chat-layout">
     <aside className="conversation-panel">
@@ -225,10 +266,22 @@ export default function ChatConversation({ params }: { params: { id: string } })
     <section className="thread">
       <header className="thread-head">
         <div><Avatar initials={initialsOf(otherMember?.displayName ?? activeConversation?.name ?? "?")} color={colorFor(conversationId)}/><span><strong>{otherMember?.displayName ?? activeConversation?.name ?? "Conversation"}</strong><small>{activeConversation?.members.length ?? 0} members</small></span></div>
-        <div><button><Search/></button><button><Phone/></button><button><Video/></button><button><Info/></button></div>
+        <div>
+          <button onClick={() => { setMessageSearchOpen((open) => !open); setMessageSearch(""); }} aria-label="Search messages"><Search/></button>
+          <button onClick={() => startCall("audio")} disabled={!otherMember || dialing !== null} aria-label="Start audio call"><Phone/></button>
+          <button onClick={() => startCall("video")} disabled={!otherMember || dialing !== null} aria-label="Start video call"><Video/></button>
+          <button aria-label="Conversation information"><Info/></button>
+        </div>
       </header>
+      {messageSearchOpen && <div className="message-search">
+        <Search size={16}/>
+        <input value={messageSearch} onChange={(event) => setMessageSearch(event.target.value)} placeholder="Search older messages…" autoFocus />
+        {normalizedSearch && <small>{visibleMessages.length} {visibleMessages.length === 1 ? "result" : "results"}</small>}
+        <button onClick={() => { setMessageSearchOpen(false); setMessageSearch(""); }} aria-label="Close message search"><X size={16}/></button>
+      </div>}
       <div className="messages">
-        {messages.map((m) => {
+        {normalizedSearch && visibleMessages.length === 0 && <p className="message-search-empty">No messages match &ldquo;{messageSearch.trim()}&rdquo;.</p>}
+        {visibleMessages.map((m) => {
           const mine = m.senderId === user?.id;
           const sender = memberById.get(m.senderId);
           return <div className={`message ${mine ? "mine" : ""}`} key={m.eventId}>
@@ -243,11 +296,17 @@ export default function ChatConversation({ params }: { params: { id: string } })
         {typingNames.length > 0 && <div className="typing"><span><i/><i/><i/></span><small>{typingNames.join(", ")} {typingNames.length > 1 ? "are" : "is"} typing</small></div>}
       </div>
       <div className="composer">
+        {attachment && <div className="attachment-chip"><FileText size={16}/><span><strong>{attachment.name}</strong><small>{Math.ceil(attachment.size / 1024)} KB</small></span><button onClick={() => { setAttachment(null); setComposerError(null); }} aria-label="Remove attachment"><X size={15}/></button></div>}
+        {composerError && <p className="composer-error" role="alert">{composerError}</p>}
+        {emojiOpen && <div className="emoji-picker" aria-label="Choose an emoji">
+          {["😀", "😂", "😍", "👍", "🎉", "❤️", "😮", "😢", "🙏", "🔥", "✅", "👏"].map((emoji) => <button key={emoji} onClick={() => { onTyping(text + emoji); setEmojiOpen(false); }} aria-label={`Add ${emoji}`}>{emoji}</button>)}
+        </div>}
         <div>
-          <button><Paperclip/></button>
+          <input ref={fileInputRef} className="visually-hidden" type="file" onChange={(event) => { setAttachment(event.target.files?.[0] ?? null); setComposerError(null); event.currentTarget.value = ""; }} />
+          <button onClick={() => fileInputRef.current?.click()} aria-label="Attach a file"><Paperclip/></button>
           <textarea value={text} onChange={(e) => onTyping(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder="Write a message…"/>
-          <button><Smile/></button>
-          <button className="send" onClick={sendMessage}><Send/></button>
+          <button onClick={() => setEmojiOpen((open) => !open)} aria-label="Add emoji" aria-expanded={emojiOpen}><Smile/></button>
+          <button className="send" onClick={sendMessage} aria-label="Send message"><Send/></button>
         </div>
         <small>Press Enter to send · Shift + Enter for a new line</small>
       </div>
