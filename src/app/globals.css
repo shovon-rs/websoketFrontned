@@ -77,7 +77,8 @@ button {
 	margin-bottom: 10px;
 }
 .nav a,
-.sidebar-bottom > a {
+.sidebar-bottom > a,
+.sidebar-bottom > button {
 	height: 46px;
 	display: flex;
 	align-items: center;
@@ -89,9 +90,16 @@ button {
 	font-size: 14px;
 	font-weight: 500;
 	margin: 3px 0;
+	border: 0;
+	background: transparent;
+	width: 100%;
+	text-align: left;
+	cursor: pointer;
+	font-family: inherit;
 }
 .nav a:hover,
 .sidebar-bottom > a:hover,
+.sidebar-bottom > button:hover,
 .nav a.active {
 	background: #214b40;
 	color: #fff;

@@ -85,10 +85,13 @@ export function useWebRTCCall({ callId, isCaller, callType, onEnded }: UseWebRTC
 
     async function setup() {
       try {
-        const iceServers = await callsApi.getIceServers();
-        if (cancelled) return;
-
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === "video" });
+        // Independent of each other — fetching ICE servers doesn't need media access and
+        // getUserMedia doesn't need ICE servers, so run them concurrently rather than
+        // paying two sequential round trips (the media prompt alone can take a while).
+        const [iceServers, stream] = await Promise.all([
+          callsApi.getIceServers(),
+          navigator.mediaDevices.getUserMedia({ audio: true, video: callType === "video" }),
+        ]);
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;

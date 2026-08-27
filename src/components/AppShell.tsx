@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, ChevronDown, LayoutDashboard, MapPin, MessageCircle, PanelsTopLeft, Phone, Search, Settings, Users, Zap } from "lucide-react";
+import { Bell, Check, ChevronDown, Copy, LayoutDashboard, MapPin, MessageCircle, PanelsTopLeft, Phone, Search, Settings, Share2, Users, X, Zap } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { useAuth } from "@/lib/auth-context";
 import { useWs } from "@/lib/ws-context";
@@ -33,6 +33,12 @@ export function AppShell({ children, title, subtitle, actions }: { children: Rea
   const [searchQuery, setSearchQuery] = useState("");
   const [highlighted, setHighlighted] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  // Registration is open — there's no invite-token system, so "inviting" someone just
+  // means sharing the signup link; anyone with it can create their own account.
+  const inviteLink = typeof window === "undefined" ? "" : `${window.location.origin}/register`;
 
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLocaleLowerCase();
@@ -68,6 +74,30 @@ export function AppShell({ children, title, subtitle, actions }: { children: Rea
     router.push(href);
   }
 
+  async function copyInviteLink() {
+    setInviteError(null);
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 2000);
+    } catch {
+      setInviteError("Could not copy the link. Select it and copy it manually.");
+    }
+  }
+
+  async function shareInvite() {
+    if (!navigator.share) {
+      await copyInviteLink();
+      return;
+    }
+    try {
+      await navigator.share({ title: "Join me on relay", text: "Join me on relay", url: inviteLink });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setInviteError("This device could not open the share menu. You can copy the link instead.");
+    }
+  }
+
   if (authStatus !== "authenticated" || !user) {
     return <div className="app-shell"><main className="main"><div className="page">Loading your workspace…</div></main></div>;
   }
@@ -76,7 +106,7 @@ export function AppShell({ children, title, subtitle, actions }: { children: Rea
     <aside className="sidebar">
       <Link className="brand" href="/dashboard"><span className="brand-mark"><Zap size={19} fill="currentColor" /></span><span>relay</span></Link>
       <nav className="nav"><p className="nav-label">Workspace</p>{nav.map(({ href, label, icon: Icon }) => <Link key={href} href={href} className={path.startsWith(href.split("/").slice(0,2).join("/")) ? "active" : ""}><Icon size={19}/><span>{label}</span></Link>)}</nav>
-      <div className="sidebar-bottom"><Link href="#"><Users size={19}/> Invite people</Link><Link href="/settings" className={path.startsWith("/settings") ? "active" : ""}><Settings size={19}/> Settings</Link><button className="user-card" onClick={() => logout().then(() => router.replace("/login"))} title="Sign out"><Avatar initials={initialsOf(user.displayName)} color="green" online src={user.avatarUrl}/><div><strong>{user.displayName}</strong><small>{user.email}</small></div><ChevronDown size={16}/></button></div>
+      <div className="sidebar-bottom"><button type="button" onClick={() => { setInviteOpen(true); setInviteCopied(false); setInviteError(null); }}><Users size={19}/> Invite people</button><Link href="/settings" className={path.startsWith("/settings") ? "active" : ""}><Settings size={19}/> Settings</Link><button className="user-card" onClick={() => logout().then(() => router.replace("/login"))} title="Sign out"><Avatar initials={initialsOf(user.displayName)} color="green" online src={user.avatarUrl}/><div><strong>{user.displayName}</strong><small>{user.email}</small></div><ChevronDown size={16}/></button></div>
     </aside>
     <main className="main"><header className="topbar"><div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div><div className="top-actions">{wsStatus !== "connected" && <span className={`conn-pill ${wsStatus}`}><i/>{wsStatus === "reconnecting" ? "Reconnecting…" : wsStatus === "connecting" ? "Connecting…" : "Live updates unavailable"}</span>}<button className="search-btn" onClick={() => setSearchOpen(true)} aria-label="Search workspace"><Search size={18}/><span>Search anything</span><kbd>Ctrl K</kbd></button>{actions}<Link href="/notifications" className="icon-btn"><Bell size={19}/></Link></div></header>{children}</main>
     {searchOpen && <div className="global-search-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSearchOpen(false); }}>
@@ -91,6 +121,14 @@ export function AppShell({ children, title, subtitle, actions }: { children: Rea
           {searchResults.length === 0 && <p>No matching pages or features.</p>}
         </div>
         <footer><span>↑↓ Navigate</span><span>Enter Open</span><span>Esc Close</span></footer>
+      </section>
+    </div>}
+    {inviteOpen && <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setInviteOpen(false); }}>
+      <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="invite-title">
+        <header><div><h2 id="invite-title">Invite people</h2><p>Anyone with this link can create their own relay account.</p></div><button onClick={() => setInviteOpen(false)} aria-label="Close invite dialog"><X size={18}/></button></header>
+        <label>Invite link<div><input value={inviteLink} readOnly onFocus={(event) => event.currentTarget.select()}/><button onClick={copyInviteLink}>{inviteCopied ? <Check size={16}/> : <Copy size={16}/>} {inviteCopied ? "Copied" : "Copy"}</button></div></label>
+        {inviteError && <p className="share-error" role="alert">{inviteError}</p>}
+        {typeof navigator !== "undefined" && typeof navigator.share === "function" && <button className="primary wide" onClick={shareInvite}><Share2 size={16}/> Share via another app</button>}
       </section>
     </div>}
   </div>;
