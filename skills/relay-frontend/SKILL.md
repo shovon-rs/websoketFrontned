@@ -55,6 +55,23 @@ skill documents the server side). Don't create parallel API/WS clients — these
   `Providers.tsx`) is what surfaces `call:ringing` while the user is anywhere else in the app —
   don't add a second listener for it.
 - `src/lib/push.ts` — Web Push subscribe/unsubscribe against `public/sw.js`.
+- `src/components/TrackingMap.tsx` — real Leaflet + OpenStreetMap map (no API key needed).
+  Imperative wrapper (`import("leaflet")` inside `useEffect`, never a static top-level import —
+  Leaflet touches `window` at load time and breaks SSR otherwise). Takes a flat `markers` array
+  and diffs add/update/remove itself; don't reach into the Leaflet instance from outside it.
+- `src/components/UserSearchDropdown.tsx` — debounced user search combobox (name/email, keyboard
+  nav, click-outside-to-close). This is the reusable building block for "pick a teammate" flows —
+  used by chat's new-conversation flow, the call picker, and tracking's share-with flow. Reach for
+  this instead of a raw email `<input>` any time a feature needs to target another user.
+
+Live tracking is a real multi-user feature, not a solo demo: a session owner can share their
+live location with specific teammates (`tracking.api.ts`'s `addViewer`/`removeViewer`, picked via
+`UserSearchDropdown`), and viewers see it appear automatically — sharing fires a persisted
+notification with `data.kind === "tracking:shared"`, and the tracking page listens for exactly
+that marker to know when to refetch `GET /tracking/sessions` and auto-`tracking:join` the new
+session. `GET /tracking/sessions` returns `{ owned, shared }`; both need the same reconnect-rejoin
+treatment as chat rooms (see above) — the tracking page rejoins every session in both lists,
+not just its own, whenever `useWs().status` becomes `"connected"`.
 
 Backend contract notes that don't match `backend.md`'s illustrative snippets:
 refresh tokens are an HttpOnly cookie (not a JSON field — see the backend skill's
@@ -92,7 +109,7 @@ Mock data is acceptable for a UI-only task. Keep it easy to replace and do not i
 - Chat: conversations, optimistic messages, typing, presence, receipts, acknowledgements, and reconnect catch-up.
 - Notifications: in-app toasts, history, read state, and browser push registration.
 - Dashboard: fetch the initial REST snapshot, then apply incremental realtime updates.
-- Tracking: authorized sessions, consent, active indicators, throttled map updates, and privacy controls.
+- Tracking: authorized sessions, consent, active indicators, throttled map updates, privacy controls, and explicit per-user sharing (see `TrackingMap`/`UserSearchDropdown` above) on a real map — not a static placeholder.
 - Collaboration: broadcast simple document operations initially; do not claim conflict safety without OT or CRDT integration.
 - Calls: use WebSocket only for signaling and WebRTC for media. Keep mute, camera, screen sharing, and hang-up controls accessible.
 

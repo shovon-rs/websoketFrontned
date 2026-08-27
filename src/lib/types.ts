@@ -73,6 +73,16 @@ export type TrackingLocation = {
   recordedAt: string;
 };
 
+export type OwnedTrackingSession = TrackingSession & {
+  viewers: { userId: string; user: User }[];
+  locations: TrackingLocation[];
+};
+
+export type SharedTrackingSession = TrackingSession & {
+  user: User;
+  locations: TrackingLocation[];
+};
+
 export type DocumentRecord = {
   id: string;
   ownerId: string;

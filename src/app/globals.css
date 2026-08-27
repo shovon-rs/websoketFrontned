@@ -901,77 +901,48 @@ button {
 	border-radius: 14px;
 	overflow: hidden;
 }
-.fake-map {
+.map-overlay {
 	position: relative;
 	width: 100%;
 	height: 100%;
 	min-height: 600px;
+}
+.tracking-map {
+	width: 100%;
+	height: 100%;
+	min-height: 600px;
 	background: #e9eee8;
-	background-image:
-		linear-gradient(
-			30deg,
-			#e1e8e0 12%,
-			transparent 12.5%,
-			transparent 87%,
-			#e1e8e0 87.5%
-		),
-		linear-gradient(
-			150deg,
-			#e1e8e0 12%,
-			transparent 12.5%,
-			transparent 87%,
-			#e1e8e0 87.5%
-		);
-	background-size: 90px 160px;
 }
-.road {
-	position: absolute;
-	height: 18px;
-	background: #fff;
-	border: 1px solid #dce2dc;
-	width: 120%;
-	left: -10%;
-	transform: rotate(-14deg);
-	top: 38%;
-}
-.r2 {
-	transform: rotate(57deg);
-	top: 44%;
-}
-.r3 {
-	transform: rotate(4deg);
-	top: 70%;
-}
-.water {
-	position: absolute;
-	background: #bedde2;
-	width: 26%;
-	height: 110%;
-	right: -7%;
-	top: -5%;
-	transform: rotate(8deg);
-}
-.route {
-	position: absolute;
-	width: 36%;
-	height: 45%;
-	left: 33%;
-	top: 30%;
-	border: 4px dashed var(--accent);
-	border-left-color: transparent;
+.map-dot {
+	width: 30px;
+	height: 30px;
 	border-radius: 50%;
-	transform: rotate(20deg);
+	display: grid;
+	place-items: center;
+	color: #fff;
+	font: 700 10px Manrope;
+	border: 2px solid #fff;
+	box-shadow: 0 2px 8px #0004;
+	position: relative;
 }
-.map-marker {
+.map-dot::after {
+	content: "";
 	position: absolute;
-	left: 54%;
-	top: 42%;
-	color: var(--accent);
-	filter: drop-shadow(0 3px 3px #0003);
+	inset: -6px;
+	border-radius: 50%;
+	border: 2px solid currentColor;
+	opacity: 0.35;
+	animation: map-dot-pulse 2s ease-out infinite;
 }
-.map-marker svg {
-	width: 38px;
-	height: 38px;
+@keyframes map-dot-pulse {
+	0% {
+		transform: scale(0.7);
+		opacity: 0.5;
+	}
+	100% {
+		transform: scale(1.6);
+		opacity: 0;
+	}
 }
 .locate {
 	position: absolute;
