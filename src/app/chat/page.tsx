@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { UserSearchDropdown } from "@/components/UserSearchDropdown";
+import { ListShimmer } from "@/components/Shimmer";
 import { ApiError } from "@/lib/api-client";
 import * as chatApi from "@/lib/api/chat.api";
 import type { User } from "@/lib/types";
@@ -37,7 +38,7 @@ export default function Chat() {
     }
   }
 
-  if (!empty) return <AppShell title="Messages"><div className="page">Loading conversations…</div></AppShell>;
+  if (!empty) return <AppShell title="Messages"><div className="page narrow"><section className="card"><ListShimmer rows={5}/></section></div></AppShell>;
 
   return <AppShell title="Messages"><div className="page narrow"><section className="card">
     <h3>No conversations yet</h3>

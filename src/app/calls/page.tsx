@@ -1,5 +1,6 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
+import { ListShimmer } from "@/components/Shimmer";
 import { Avatar } from "@/components/Avatar";
 import { Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Video } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -46,7 +47,7 @@ export default function CallHistory() {
     callsApi.listCalls().then(setCalls);
   }, [authStatus]);
 
-  if (!calls) return <AppShell title="Calls"><div className="page">Loading…</div></AppShell>;
+  if (!calls) return <AppShell title="Calls"><div className="page narrow"><section className="card"><ListShimmer rows={5}/></section></div></AppShell>;
 
   return <AppShell title="Calls" subtitle="Your full call history.">
     <div className="page narrow">

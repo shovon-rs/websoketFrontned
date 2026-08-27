@@ -1,6 +1,7 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
+import { PageShimmer } from "@/components/Shimmer";
 import { Bold, Check, Copy, Italic, Link as LinkIcon, List, MessageSquare, Redo, Share2, Undo, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -115,7 +116,7 @@ export default function Collab({ params }: { params: { docId: string } }) {
     }
   }
 
-  if (!docId) return <AppShell title="Documents"><div className="page">Creating your document…</div></AppShell>;
+  if (!docId) return <AppShell title="Documents"><PageShimmer variant="document" /></AppShell>;
 
   return <AppShell title="Documents" actions={<button className="primary small" onClick={() => { setShareOpen(true); setCopied(false); setShareError(null); }}><Share2/> Share</button>}>
     <div className="editor-shell">

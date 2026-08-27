@@ -2,6 +2,7 @@
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { UserSearchDropdown } from "@/components/UserSearchDropdown";
+import { PageShimmer } from "@/components/Shimmer";
 import { Mic, MicOff, MonitorUp, PhoneOff, Video, VideoOff, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -150,7 +151,7 @@ export default function CallPage({ params }: { params: { callId: string } }) {
     };
   }, [params.callId]);
 
-  if (call === "loading") return <AppShell title="Calls"><div className="page">Loading call…</div></AppShell>;
+  if (call === "loading") return <AppShell title="Calls"><PageShimmer variant="call" /></AppShell>;
   if (loadError) return <AppShell title="Calls"><div className="page narrow"><section className="card"><h3>Something went wrong</h3><p className="auth-error">{loadError}</p></section></div></AppShell>;
   if (!call) return <StartCallPicker />;
   return <ActiveCall call={call} callId={params.callId} />;
