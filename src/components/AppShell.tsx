@@ -1,8 +1,9 @@
 "use client";
+import * as notificationsApi from "@/lib/api/notifications.api";
 import { useAuth } from "@/lib/auth-context";
-import { useWs } from "@/lib/ws-context";
 import { hasRole } from "@/lib/roles";
-import type { Role } from "@/lib/types";
+import type { AppNotification, Role } from "@/lib/types";
+import { useWs } from "@/lib/ws-context";
 import {
 	Bell,
 	Check,
@@ -30,7 +31,12 @@ import { Avatar } from "./Avatar";
 import { LiveCountdownPill } from "./LiveCountdownPill";
 import { PageShimmer } from "./Shimmer";
 
-type NavItem = { href: string; label: string; icon: LucideIcon; minRole?: Role };
+type NavItem = {
+	href: string;
+	label: string;
+	icon: LucideIcon;
+	minRole?: Role;
+};
 
 const nav: NavItem[] = [
 	{ href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -63,10 +69,11 @@ export function AppShell({
 	const path = usePathname();
 	const router = useRouter();
 	const { status: authStatus, user, logout } = useAuth();
-	const { status: wsStatus } = useWs();
+	const { status: wsStatus, subscribe } = useWs();
 	const [searchOpen, setSearchOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [highlighted, setHighlighted] = useState(0);
+	const [unreadNotifications, setUnreadNotifications] = useState(0);
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const [inviteOpen, setInviteOpen] = useState(false);
 	const [inviteCopied, setInviteCopied] = useState(false);
@@ -77,7 +84,9 @@ export function AppShell({
 		typeof window === "undefined" ? "" : `${window.location.origin}/register`;
 
 	const searchablePages = useMemo(() => {
-		const visible = nav.filter((item) => hasRole(user?.role, item.minRole ?? "user"));
+		const visible = nav.filter((item) =>
+			hasRole(user?.role, item.minRole ?? "user"),
+		);
 		return [
 			...visible.map((item) => ({ ...item, keywords: item.label })),
 			{
@@ -100,6 +109,35 @@ export function AppShell({
 	useEffect(() => {
 		if (authStatus === "unauthenticated") router.replace("/login");
 	}, [authStatus, router]);
+
+	useEffect(() => {
+		if (authStatus !== "authenticated") return;
+		let cancelled = false;
+		notificationsApi
+			.listNotifications()
+			.then((items) => {
+				if (!cancelled)
+					setUnreadNotifications(items.filter((item) => !item.readAt).length);
+			})
+			.catch(() => undefined);
+
+		const offNew = subscribe("notification:new", (event) => {
+			const notification = event.payload as AppNotification;
+			if (!notification.readAt) setUnreadNotifications((count) => count + 1);
+		});
+		const offRead = subscribe("notification:read", () =>
+			setUnreadNotifications((count) => Math.max(0, count - 1)),
+		);
+		const offReadAll = subscribe("notification:read-all", () =>
+			setUnreadNotifications(0),
+		);
+		return () => {
+			cancelled = true;
+			offNew();
+			offRead();
+			offReadAll();
+		};
+	}, [authStatus, subscribe]);
 
 	useEffect(() => {
 		function onShortcut(event: KeyboardEvent) {
@@ -262,8 +300,17 @@ export function AppShell({
 							<kbd>Ctrl K</kbd>
 						</button>
 						{actions}
-						<Link href="/notifications" className="icon-btn">
+						<Link
+							href="/notifications"
+							className="icon-btn"
+							aria-label={`${unreadNotifications} unread notifications`}
+						>
 							<Bell size={19} />
+							{unreadNotifications > 0 && (
+								<span className="notification-badge">
+									{unreadNotifications > 99 ? "99+" : unreadNotifications}
+								</span>
+							)}
 						</Link>
 					</div>
 				</header>
