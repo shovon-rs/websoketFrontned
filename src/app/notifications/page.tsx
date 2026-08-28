@@ -1,10 +1,12 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
-import { Bell, BellRing, Check, FileText, MessageCircle, PhoneIncoming, User } from "lucide-react";
+import Link from "next/link";
+import { Bell, BellRing, Check, FileText, MessageCircle, PhoneIncoming, Radio, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import * as notificationsApi from "@/lib/api/notifications.api";
 import { useAuth } from "@/lib/auth-context";
 import { useWs } from "@/lib/ws-context";
+import { useCountdown } from "@/lib/use-countdown";
 import { subscribePush, isPushSupported } from "@/lib/push";
 import type { AppNotification } from "@/lib/types";
 
@@ -12,13 +14,31 @@ const icons: Record<string, typeof MessageCircle> = {
   "message:new": MessageCircle,
   "notification:new": Bell,
   "call:ringing": PhoneIncoming,
+  "announcement:new": Radio,
   file: FileText,
   user: User,
   check: Check,
 };
 
 function iconFor(n: AppNotification) {
+  // n.type is a severity ("info"/"success"/...), not an event-type string, so it never
+  // actually matches these keys — data.kind is what distinguishes an announcement in practice.
+  if (n.data?.kind === "announcement") return Radio;
   return icons[n.type] ?? icons[n.title] ?? Bell;
+}
+
+function AnnouncementRowExtra({ n }: { n: AppNotification }) {
+  const announcementId = n.data?.announcementId as string | undefined;
+  const scheduledAt = (n.data?.scheduledAt as string | null | undefined) ?? null;
+  const { label, isLive } = useCountdown(scheduledAt);
+  if (!announcementId) return null;
+
+  return (
+    <span className="notification-live" onClick={(e) => e.stopPropagation()}>
+      {scheduledAt && <span>{isLive ? "LIVE" : label}</span>}
+      <Link href={`/live/${announcementId}`} className="plain">Join now</Link>
+    </span>
+  );
 }
 
 function timeAgo(iso: string): string {
@@ -84,6 +104,7 @@ export default function Notifications() {
           return <button className={`notification-row ${!n.readAt ? "unread" : ""}`} onClick={() => setItems(items.map((x) => (x.id === n.id ? { ...x, readAt: x.readAt ?? new Date().toISOString() } : x)))} key={n.id}>
             <span className="tiny-icon coral"><Icon/></span>
             <span><strong>{n.title}</strong><small>{n.body}</small></span>
+            {n.data?.kind === "announcement" && <AnnouncementRowExtra n={n} />}
             <time>{timeAgo(n.createdAt)}</time>
             {!n.readAt && <i/>}
           </button>;

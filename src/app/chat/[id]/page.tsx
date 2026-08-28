@@ -5,7 +5,7 @@ import { UserSearchDropdown } from "@/components/UserSearchDropdown";
 import { FileText, Info, Paperclip, Phone, Search, Send, Smile, Video, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as chatApi from "@/lib/api/chat.api";
 import { useAuth } from "@/lib/auth-context";
 import { useWs } from "@/lib/ws-context";
@@ -14,6 +14,19 @@ import { ApiError } from "@/lib/api-client";
 import type { Conversation, Message, User } from "@/lib/types";
 
 const PALETTE = ["coral", "blue", "violet", "gold", "green"];
+const REACTION_PREFIX = "__relay_reaction__:";
+const REACTION_OPTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
+function parseReaction(content: string): { targetEventId: string; emoji: string } | null {
+  if (!content.startsWith(REACTION_PREFIX)) return null;
+  try {
+    const value = JSON.parse(content.slice(REACTION_PREFIX.length)) as { targetEventId?: unknown; emoji?: unknown };
+    if (typeof value.targetEventId !== "string" || typeof value.emoji !== "string") return null;
+    return { targetEventId: value.targetEventId, emoji: value.emoji };
+  } catch {
+    return null;
+  }
+}
 function colorFor(id: string): string {
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
@@ -46,9 +59,11 @@ export default function ChatConversation({ params }: { params: { id: string } })
   const [attachment, setAttachment] = useState<File | null>(null);
   const [composerError, setComposerError] = useState<string | null>(null);
   const [dialing, setDialing] = useState<"audio" | "video" | null>(null);
+  const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
 
   const lastEventIdRef = useRef<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const lastTypingSentRef = useRef(0);
   const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -206,6 +221,24 @@ export default function ChatConversation({ params }: { params: { id: string } })
     setComposerError(null);
   }, [attachment, text, user, conversationId, send]);
 
+  const sendReaction = useCallback((targetEventId: string, emoji: string) => {
+    if (!user) return;
+    const eventId = makeEventId();
+    const content = `${REACTION_PREFIX}${JSON.stringify({ targetEventId, emoji })}`;
+    const optimistic: Message = {
+      id: eventId,
+      eventId,
+      conversationId,
+      senderId: user.id,
+      content,
+      status: "sending",
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((previous) => [...previous, optimistic]);
+    send("message:send", { conversationId, content }, eventId);
+    setReactionPickerFor(null);
+  }, [conversationId, send, user]);
+
   function startCall(callType: "audio" | "video") {
     if (!otherMember || dialing) return;
     setComposerError(null);
@@ -240,10 +273,27 @@ export default function ChatConversation({ params }: { params: { id: string } })
   }
 
   const typingNames = Array.from(typingUsers).map((id) => memberById.get(id)?.displayName.split(" ")[0] ?? "Someone");
+  const regularMessages = useMemo(() => messages.filter((message) => !parseReaction(message.content)), [messages]);
+  const reactionsByMessage = useMemo(() => {
+    const byMessage = new Map<string, Map<string, string>>();
+    messages.forEach((message) => {
+      const reaction = parseReaction(message.content);
+      if (!reaction) return;
+      const byUser = byMessage.get(reaction.targetEventId) ?? new Map<string, string>();
+      if (reaction.emoji) byUser.set(message.senderId, reaction.emoji);
+      else byUser.delete(message.senderId);
+      byMessage.set(reaction.targetEventId, byUser);
+    });
+    return byMessage;
+  }, [messages]);
   const normalizedSearch = messageSearch.trim().toLocaleLowerCase();
   const visibleMessages = normalizedSearch
-    ? messages.filter((message) => message.content.toLocaleLowerCase().includes(normalizedSearch))
-    : messages;
+    ? regularMessages.filter((message) => message.content.toLocaleLowerCase().includes(normalizedSearch))
+    : regularMessages;
+
+  useLayoutEffect(() => {
+    if (!normalizedSearch) messagesEndRef.current?.scrollIntoView({ block: "end" });
+  }, [messages, typingNames.length, normalizedSearch]);
 
   return <AppShell title="Messages"><div className="chat-layout">
     <aside className="conversation-panel">
@@ -256,7 +306,9 @@ export default function ChatConversation({ params }: { params: { id: string } })
       {conversations.map((c) => {
         const other = c.members.find((m) => m.userId !== user?.id)?.user;
         const label = c.type === "group" ? c.name ?? "Group" : other?.displayName ?? "Conversation";
-        const preview = c.messages?.[0]?.content ?? "No messages yet";
+        const latestContent = c.messages?.[0]?.content;
+        const latestReaction = latestContent ? parseReaction(latestContent) : null;
+        const preview = latestReaction ? `Reacted ${latestReaction.emoji} to a message` : latestContent ?? "No messages yet";
         return <Link href={`/chat/${c.id}`} className={`conversation ${conversationId === c.id ? "selected" : ""}`} key={c.id}>
           <Avatar initials={initialsOf(label)} color={colorFor(c.id)} />
           <div><strong>{label}</strong><small>{preview}</small></div>
@@ -284,16 +336,27 @@ export default function ChatConversation({ params }: { params: { id: string } })
         {visibleMessages.map((m) => {
           const mine = m.senderId === user?.id;
           const sender = memberById.get(m.senderId);
+          const messageReactions = reactionsByMessage.get(m.eventId);
+          const reactionCounts = Array.from(messageReactions?.values() ?? []).reduce((counts, emoji) => counts.set(emoji, (counts.get(emoji) ?? 0) + 1), new Map<string, number>());
+          const myReaction = user ? messageReactions?.get(user.id) : undefined;
           return <div className={`message ${mine ? "mine" : ""}`} key={m.eventId}>
             {!mine && <Avatar initials={initialsOf(sender?.displayName ?? "?")} color={colorFor(m.senderId)} size="sm"/>}
-            <div>
+            <div className="message-content">
               <span className="message-meta"><strong>{mine ? "You" : sender?.displayName ?? "Unknown"}</strong><time>{formatTime(m.createdAt)}</time></span>
               <p>{m.content}</p>
+              <div className="message-reaction-actions">
+                <button onClick={() => setReactionPickerFor((current) => current === m.eventId ? null : m.eventId)} aria-label="React to message" aria-expanded={reactionPickerFor === m.eventId}><Smile size={15}/></button>
+                {reactionPickerFor === m.eventId && <div className="message-reaction-picker">
+                  {REACTION_OPTIONS.map((emoji) => <button className={myReaction === emoji ? "selected" : ""} key={emoji} onClick={() => sendReaction(m.eventId, myReaction === emoji ? "" : emoji)} aria-label={`${myReaction === emoji ? "Remove" : "React with"} ${emoji}`}>{emoji}</button>)}
+                </div>}
+              </div>
+              {reactionCounts.size > 0 && <div className="message-reactions">{Array.from(reactionCounts).map(([emoji, count]) => <button key={emoji} className={myReaction === emoji ? "mine" : ""} onClick={() => sendReaction(m.eventId, myReaction === emoji ? "" : emoji)} aria-label={`${emoji}, ${count} ${count === 1 ? "reaction" : "reactions"}`}>{emoji}<span>{count}</span></button>)}</div>}
               {mine && <small className="delivered">{m.status === "sending" ? "Sending…" : m.status === "failed" ? "Failed to send" : "Delivered ✓"}</small>}
             </div>
           </div>;
         })}
         {typingNames.length > 0 && <div className="typing"><span><i/><i/><i/></span><small>{typingNames.join(", ")} {typingNames.length > 1 ? "are" : "is"} typing</small></div>}
+        <div ref={messagesEndRef} aria-hidden="true" />
       </div>
       <div className="composer">
         {attachment && <div className="attachment-chip"><FileText size={16}/><span><strong>{attachment.name}</strong><small>{Math.ceil(attachment.size / 1024)} KB</small></span><button onClick={() => { setAttachment(null); setComposerError(null); }} aria-label="Remove attachment"><X size={15}/></button></div>}

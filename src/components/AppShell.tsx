@@ -1,6 +1,8 @@
 "use client";
 import { useAuth } from "@/lib/auth-context";
 import { useWs } from "@/lib/ws-context";
+import { hasRole } from "@/lib/roles";
+import type { Role } from "@/lib/types";
 import {
 	Bell,
 	Check,
@@ -11,20 +13,26 @@ import {
 	MessageCircle,
 	PanelsTopLeft,
 	Phone,
+	Radio,
 	Search,
 	Settings,
 	Share2,
+	ShieldCheck,
 	Users,
 	X,
 	Zap,
+	type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "./Avatar";
+import { LiveCountdownPill } from "./LiveCountdownPill";
 import { PageShimmer } from "./Shimmer";
 
-const nav = [
+type NavItem = { href: string; label: string; icon: LucideIcon; minRole?: Role };
+
+const nav: NavItem[] = [
 	{ href: "/dashboard", label: "Overview", icon: LayoutDashboard },
 	{ href: "/chat", label: "Messages", icon: MessageCircle },
 	{ href: "/people", label: "People", icon: Users },
@@ -32,16 +40,8 @@ const nav = [
 	{ href: "/tracking", label: "Live tracking", icon: MapPin },
 	{ href: "/collab/launch-plan", label: "Documents", icon: PanelsTopLeft },
 	{ href: "/call/team-sync", label: "Calls", icon: Phone },
-];
-
-const searchablePages = [
-	...nav.map((item) => ({ ...item, keywords: item.label })),
-	{
-		href: "/settings",
-		label: "Settings",
-		icon: Settings,
-		keywords: "profile account name photo",
-	},
+	{ href: "/live", label: "Live", icon: Radio },
+	{ href: "/admin", label: "Admin", icon: ShieldCheck, minRole: "admin" },
 ];
 
 function initialsOf(name: string): string {
@@ -76,13 +76,26 @@ export function AppShell({
 	const inviteLink =
 		typeof window === "undefined" ? "" : `${window.location.origin}/register`;
 
+	const searchablePages = useMemo(() => {
+		const visible = nav.filter((item) => hasRole(user?.role, item.minRole ?? "user"));
+		return [
+			...visible.map((item) => ({ ...item, keywords: item.label })),
+			{
+				href: "/settings",
+				label: "Settings",
+				icon: Settings,
+				keywords: "profile account name photo",
+			},
+		];
+	}, [user?.role]);
+
 	const searchResults = useMemo(() => {
 		const query = searchQuery.trim().toLocaleLowerCase();
 		if (!query) return searchablePages;
 		return searchablePages.filter((item) =>
 			`${item.label} ${item.keywords}`.toLocaleLowerCase().includes(query),
 		);
-	}, [searchQuery]);
+	}, [searchQuery, searchablePages]);
 
 	useEffect(() => {
 		if (authStatus === "unauthenticated") router.replace("/login");
@@ -168,20 +181,22 @@ export function AppShell({
 				</Link>
 				<nav className="nav">
 					<p className="nav-label">Workspace</p>
-					{nav.map(({ href, label, icon: Icon }) => (
-						<Link
-							key={href}
-							href={href}
-							className={
-								path.startsWith(href.split("/").slice(0, 2).join("/"))
-									? "active"
-									: ""
-							}
-						>
-							<Icon size={19} />
-							<span>{label}</span>
-						</Link>
-					))}
+					{nav
+						.filter((item) => hasRole(user.role, item.minRole ?? "user"))
+						.map(({ href, label, icon: Icon }) => (
+							<Link
+								key={href}
+								href={href}
+								className={
+									path.startsWith(href.split("/").slice(0, 2).join("/"))
+										? "active"
+										: ""
+								}
+							>
+								<Icon size={19} />
+								<span>{label}</span>
+							</Link>
+						))}
 				</nav>
 				<div className="sidebar-bottom">
 					<button
@@ -226,6 +241,7 @@ export function AppShell({
 						{subtitle && <p>{subtitle}</p>}
 					</div>
 					<div className="top-actions">
+						<LiveCountdownPill />
 						{wsStatus !== "connected" && (
 							<span className={`conn-pill ${wsStatus}`}>
 								<i />

@@ -6,11 +6,13 @@ export type WsEvent<T = unknown> = {
   error?: { code: string; message: string };
 };
 
+export type Role = "user" | "admin" | "super_admin";
+
 export type User = {
   id: string;
   email: string;
   displayName: string;
-  role?: string;
+  role?: Role;
   createdAt?: string;
   avatarUrl?: string | null;
 };
@@ -136,6 +138,37 @@ export type CallHistoryEntry = {
   endedAt: string | null;
   createdAt: string;
   participants: CallHistoryParticipant[];
+};
+
+export type AnnouncementAudience = "everyone" | "invited";
+export type AnnouncementStatus = "published" | "scheduled" | "live" | "ended" | "cancelled";
+
+export type Announcement = {
+  id: string;
+  title: string;
+  body: string;
+  authorId: string;
+  broadcasterId: string | null;
+  audience: AnnouncementAudience;
+  invitedUsers?: { id: string; displayName: string; email: string }[];
+  scheduledAt: string | null;
+  status: AnnouncementStatus;
+  createdAt: string;
+};
+
+export type LiveStreamRequestStatus = "pending" | "approved" | "rejected";
+
+export type LiveStreamRequest = {
+  id: string;
+  requesterId: string;
+  requester?: { id: string; displayName: string; email: string };
+  title: string;
+  description: string;
+  proposedAt: string | null;
+  status: LiveStreamRequestStatus;
+  announcementId: string | null;
+  createdAt: string;
+  decidedAt: string | null;
 };
 
 export type IceServer = {
