@@ -44,6 +44,14 @@ export type Conversation = {
 
 export type MessageStatus = "sending" | "sent" | "delivered" | "read" | "failed";
 
+export type MessageAttachment = {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+};
+
 export type Message = {
   id: string;
   eventId: string;
@@ -52,6 +60,7 @@ export type Message = {
   content: string;
   status: MessageStatus;
   createdAt: string;
+  attachment?: MessageAttachment | null;
 };
 
 export type NotificationSeverity = "info" | "success" | "warning" | "error";

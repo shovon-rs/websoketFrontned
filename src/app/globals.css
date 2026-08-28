@@ -33,8 +33,12 @@ button {
 	cursor: pointer;
 }
 @keyframes shimmer-sweep {
-	0% { background-position: 200% 0; }
-	100% { background-position: -200% 0; }
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
 }
 .shimmer {
 	display: block;
@@ -50,10 +54,20 @@ button {
 .shimmer-line + .shimmer-line {
 	margin-top: 8px;
 }
-.shimmer-line.short { width: 34%; }
-.shimmer-line.medium { width: 62%; }
-.shimmer-line.title { width: min(330px, 70%); height: 22px; border-radius: 7px; }
-.shimmer-page > .shimmer-line.medium { margin-top: 11px; }
+.shimmer-line.short {
+	width: 34%;
+}
+.shimmer-line.medium {
+	width: 62%;
+}
+.shimmer-line.title {
+	width: min(330px, 70%);
+	height: 22px;
+	border-radius: 7px;
+}
+.shimmer-page > .shimmer-line.medium {
+	margin-top: 11px;
+}
 .shimmer-card-grid {
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -71,8 +85,12 @@ button {
 	padding: 13px 2px;
 	border-bottom: 1px solid #eff2ef;
 }
-.shimmer-list-row:last-child { border-bottom: 0; }
-.shimmer-list-row > span:last-child { flex: 1; }
+.shimmer-list-row:last-child {
+	border-bottom: 0;
+}
+.shimmer-list-row > span:last-child {
+	flex: 1;
+}
 .shimmer-avatar {
 	width: 38px;
 	height: 38px;
@@ -99,16 +117,25 @@ button {
 	height: 46px;
 	border-radius: 50%;
 }
-.shimmer-document { padding: 28px; }
+.shimmer-document {
+	padding: 28px;
+}
 .shimmer-toolbar {
 	height: 42px;
 	margin: 22px 0 34px;
 	border-radius: 8px;
 }
-.shimmer-document > div:last-child { display: grid; gap: 15px; }
-.user-search-shimmer { padding: 4px 12px; }
+.shimmer-document > div:last-child {
+	display: grid;
+	gap: 15px;
+}
+.user-search-shimmer {
+	padding: 4px 12px;
+}
 @media (prefers-reduced-motion: reduce) {
-	.shimmer { animation: none; }
+	.shimmer {
+		animation: none;
+	}
 }
 .app-shell {
 	display: grid;
@@ -462,7 +489,9 @@ button {
 	gap: 13px;
 	align-items: center;
 	text-decoration: none;
-	transition: border-color 0.15s, box-shadow 0.15s;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
 }
 a.metric:hover {
 	border-color: #c9d4cd;
@@ -814,7 +843,11 @@ a.metric:hover {
 	border-radius: 11px;
 	background: #fcfdfc;
 	text-decoration: none;
-	transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background 160ms ease;
+	transition:
+		border-color 160ms ease,
+		box-shadow 160ms ease,
+		transform 160ms ease,
+		background 160ms ease;
 }
 .quick-actions-grid > a:hover {
 	transform: translateY(-2px);
@@ -861,7 +894,9 @@ a.metric:hover {
 	height: 14px;
 	flex: none;
 	color: #96a19b;
-	transition: color 160ms ease, transform 160ms ease;
+	transition:
+		color 160ms ease,
+		transform 160ms ease;
 }
 .quick-actions-grid > a:hover > svg {
 	transform: translate(2px, -2px);
@@ -1272,6 +1307,18 @@ a.metric:hover {
 .attachment-chip button {
 	display: grid;
 	place-items: center;
+}
+a.attachment-chip {
+	text-decoration: none;
+	color: inherit;
+}
+.message-attachment-image {
+	display: block;
+	max-width: 260px;
+	max-height: 260px;
+	border-radius: 10px;
+	margin-bottom: 6px;
+	object-fit: cover;
 }
 .composer-error {
 	margin: 0 0 8px;

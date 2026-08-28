@@ -15,3 +15,12 @@ export async function getMessages(conversationId: string, after?: string) {
   const data = await apiRequest<{ messages: Message[] }>(`/conversations/${conversationId}/messages${query}`);
   return data.messages;
 }
+
+export async function uploadAttachment(conversationId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiRequest<{ attachmentId: string; url: string; mimeType: string; size: number; fileName: string }>(
+    `/conversations/${conversationId}/attachments`,
+    { method: "POST", formData },
+  );
+}
