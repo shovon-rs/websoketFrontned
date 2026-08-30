@@ -17,6 +17,7 @@ import {
 	User,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const icons: Record<string, typeof MessageCircle> = {
@@ -63,7 +64,20 @@ function timeAgo(iso: string): string {
 	return new Date(iso).toLocaleDateString();
 }
 
+function notificationDestination(notification: AppNotification): string | null {
+	const data = notification.data;
+	if (!data) return null;
+	if (typeof data.conversationId === "string") return `/chat/${data.conversationId}`;
+	if (typeof data.callId === "string") return `/call/${data.callId}`;
+	if (typeof data.documentId === "string") return `/collab/${data.documentId}`;
+	if (data.kind === "tracking:shared" || typeof data.sessionId === "string") return "/tracking";
+	if (typeof data.announcementId === "string") return `/live/${data.announcementId}`;
+	if (data.kind === "livestream-request") return "/live";
+	return null;
+}
+
 export default function Notifications() {
+	const router = useRouter();
 	const { status: authStatus } = useAuth();
 	const { subscribe, send } = useWs();
 	const [items, setItems] = useState<AppNotification[]>([]);
@@ -124,6 +138,12 @@ export default function Notifications() {
 		send("notification:read-all", {});
 	}
 
+	function openNotification(notification: AppNotification) {
+		markRead(notification);
+		const destination = notificationDestination(notification);
+		if (destination) router.push(destination);
+	}
+
 	return (
 		<AppShell
 			title="Notifications"
@@ -173,7 +193,7 @@ export default function Notifications() {
 						return (
 							<button
 								className={`notification-row ${!n.readAt ? "unread" : ""}`}
-								onClick={() => markRead(n)}
+								onClick={() => openNotification(n)}
 								key={n.id}
 							>
 								<span className="tiny-icon coral">
