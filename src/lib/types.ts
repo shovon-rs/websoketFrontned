@@ -6,7 +6,7 @@ export type WsEvent<T = unknown> = {
   error?: { code: string; message: string };
 };
 
-export type Role = "user" | "admin" | "super_admin";
+export type Role = "user" | "manager" | "admin" | "super_admin";
 
 export type User = {
   id: string;
@@ -15,6 +15,7 @@ export type User = {
   role?: Role;
   createdAt?: string;
   avatarUrl?: string | null;
+  mustChangePassword?: boolean;
 };
 
 export type PresenceUser = {

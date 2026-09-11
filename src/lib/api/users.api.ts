@@ -18,6 +18,14 @@ export async function updateUserRole(userId: string, role: Role) {
   return apiRequest<User>(`/users/${userId}/role`, { method: "PATCH", body: { role } });
 }
 
+export async function createUser(input: { email: string; password: string; displayName: string; role: Role }) {
+  return apiRequest<User>("/users", { method: "POST", body: input });
+}
+
+export async function deleteUser(userId: string) {
+  return apiRequest(`/users/${userId}`, { method: "DELETE" });
+}
+
 export async function getPresence() {
   const data = await apiRequest<{ users: PresenceUser[] }>("/users/presence");
   return data.users;

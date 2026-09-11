@@ -1,10 +1,12 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
+import { PasswordField } from "@/components/PasswordField";
 import { PageShimmer, Shimmer } from "@/components/Shimmer";
 import { ApiError } from "@/lib/api-client";
 import * as usersApi from "@/lib/api/users.api";
 import { useAuth } from "@/lib/auth-context";
+import { strongPasswordError } from "@/lib/password";
 import { Camera } from "lucide-react";
 import { useRef, useState } from "react";
 
@@ -17,11 +19,15 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_BYTES = 5 * 1024 * 1024;
 
 export default function Settings() {
-	const { user, updateProfile, setAvatarUrl } = useAuth();
+	const { user, updateProfile, changePassword, setAvatarUrl } = useAuth();
 	const [displayName, setDisplayName] = useState(user?.displayName ?? "");
 	const [error, setError] = useState<string | null>(null);
 	const [saved, setSaved] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
+
+	const [passwordError, setPasswordError] = useState<string | null>(null);
+	const [passwordSaved, setPasswordSaved] = useState(false);
+	const [changingPassword, setChangingPassword] = useState(false);
 
 	const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 	const [photoError, setPhotoError] = useState<string | null>(null);
@@ -61,6 +67,42 @@ export default function Settings() {
 			);
 		} finally {
 			setSubmitting(false);
+		}
+	}
+
+	async function onChangePassword(e: React.FormEvent<HTMLFormElement>) {
+		e.preventDefault();
+		setPasswordError(null);
+		setPasswordSaved(false);
+
+		const form = new FormData(e.currentTarget);
+		const oldPassword = String(form.get("oldPassword") ?? "");
+		const newPassword = String(form.get("newPassword") ?? "");
+		const confirmNewPassword = String(form.get("confirmNewPassword") ?? "");
+
+		if (newPassword !== confirmNewPassword) {
+			setPasswordError("New passwords do not match.");
+			return;
+		}
+		const strengthError = strongPasswordError(newPassword);
+		if (strengthError) {
+			setPasswordError(strengthError);
+			return;
+		}
+
+		setChangingPassword(true);
+		try {
+			await changePassword(oldPassword, newPassword);
+			setPasswordSaved(true);
+			e.currentTarget.reset();
+		} catch (err) {
+			setPasswordError(
+				err instanceof ApiError
+					? err.message
+					: "Could not change your password. Please try again.",
+			);
+		} finally {
+			setChangingPassword(false);
 		}
 	}
 
@@ -207,6 +249,61 @@ export default function Settings() {
 								{submitting ? "Saving…" : "Save changes"}
 							</button>
 							{saved && !dirty && (
+								<span className="save-confirmation">Saved</span>
+							)}
+						</div>
+					</form>
+				</section>
+
+				<section className="card">
+					<div className="card-head">
+						<div>
+							<h3>Password</h3>
+							<p>Change your password by entering your current one.</p>
+						</div>
+					</div>
+
+					<form className="settings-form" onSubmit={onChangePassword}>
+						<label>
+							Current password
+							<PasswordField
+								name="oldPassword"
+								autoComplete="current-password"
+								required
+							/>
+						</label>
+
+						<label>
+							New password
+							<PasswordField
+								name="newPassword"
+								minLength={8}
+								autoComplete="new-password"
+								required
+							/>
+							<small>
+								Must be 8+ characters with an uppercase letter, a lowercase
+								letter, a number, and a special character.
+							</small>
+						</label>
+
+						<label>
+							Confirm new password
+							<PasswordField
+								name="confirmNewPassword"
+								minLength={8}
+								autoComplete="new-password"
+								required
+							/>
+						</label>
+
+						{passwordError && <p className="auth-error">{passwordError}</p>}
+
+						<div className="actions">
+							<button className="primary" disabled={changingPassword}>
+								{changingPassword ? "Changing…" : "Change password"}
+							</button>
+							{passwordSaved && (
 								<span className="save-confirmation">Saved</span>
 							)}
 						</div>

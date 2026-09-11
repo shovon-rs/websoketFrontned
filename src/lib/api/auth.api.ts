@@ -31,3 +31,7 @@ export async function logout() {
   await apiRequest("/auth/logout", { method: "POST" });
   setAccessToken(null);
 }
+
+export async function changePassword(input: { oldPassword: string; newPassword: string }) {
+  return apiRequest<User>("/auth/change-password", { method: "POST", body: input });
+}

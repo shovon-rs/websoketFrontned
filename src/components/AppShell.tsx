@@ -110,6 +110,14 @@ export function AppShell({
 		if (authStatus === "unauthenticated") router.replace("/login");
 	}, [authStatus, router]);
 
+	// An admin/super_admin-created account must pick its own password before it can use
+	// anything else — every page renders through AppShell, so this is the one choke point.
+	useEffect(() => {
+		if (authStatus === "authenticated" && user?.mustChangePassword && path !== "/change-password") {
+			router.replace("/change-password");
+		}
+	}, [authStatus, user, path, router]);
+
 	useEffect(() => {
 		if (authStatus !== "authenticated") return;
 		let cancelled = false;
@@ -198,7 +206,7 @@ export function AppShell({
 		}
 	}
 
-	if (authStatus !== "authenticated" || !user) {
+	if (authStatus !== "authenticated" || !user || (user.mustChangePassword && path !== "/change-password")) {
 		return (
 			<div className="app-shell">
 				<main className="main">

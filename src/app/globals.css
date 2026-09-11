@@ -475,6 +475,11 @@ button {
 .danger {
 	background: #d94f42;
 }
+.danger.small {
+	height: 34px;
+	padding: 0 12px;
+	font-size: 10px;
+}
 .metric-grid {
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
@@ -1899,7 +1904,34 @@ a.attachment-chip {
 	font-size: 10px;
 	font-weight: 650;
 }
-.share-dialog > .primary {
+/* Fields with no adjacent button (a create-user form, say) skip the flex-row wrapper above
+   and sit directly under <label> instead — same visual treatment, no flex context needed. */
+.share-dialog label > input,
+.share-dialog label > select,
+.share-dialog .password-field input {
+	display: block;
+	width: 100%;
+	height: 40px;
+	padding: 0 11px;
+	margin-top: 7px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #fafbf9;
+	font-size: 10px;
+}
+.share-dialog .password-field {
+	margin-top: 7px;
+}
+.share-dialog .password-field input {
+	margin-top: 0;
+	padding-right: 40px;
+}
+.share-dialog label + label {
+	margin-top: 14px;
+	display: block;
+}
+.share-dialog > .primary,
+.share-dialog form > .primary {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -2076,6 +2108,13 @@ a.attachment-chip {
 .auth-form label span {
 	display: flex;
 	justify-content: space-between;
+}
+.auth-form label > small {
+	display: block;
+	font-size: 9px;
+	font-weight: 400;
+	color: var(--muted);
+	margin-top: 5px;
 }
 .auth-form a {
 	color: #db5d42;
