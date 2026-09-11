@@ -188,3 +188,36 @@ export type IceServer = {
 };
 
 export type ConnectionStatus = "connecting" | "connected" | "reconnecting" | "disconnected";
+
+export type TaskStatus = "todo" | "in_progress" | "done";
+
+export type TaskPerson = { id: string; displayName: string; email: string };
+
+export type TaskAttachment = {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+};
+
+export type TaskComment = {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: TaskPerson;
+};
+
+export type Task = {
+  id: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  creatorId: string;
+  creator: TaskPerson;
+  assignees: TaskPerson[];
+  attachments: TaskAttachment[];
+  comments: TaskComment[];
+  createdAt: string;
+  updatedAt: string;
+};

@@ -73,6 +73,7 @@ function notificationDestination(notification: AppNotification): string | null {
 	if (data.kind === "tracking:shared" || typeof data.sessionId === "string") return "/tracking";
 	if (typeof data.announcementId === "string") return `/live/${data.announcementId}`;
 	if (data.kind === "livestream-request") return "/live";
+	if (typeof data.taskId === "string") return `/tasks/${data.taskId}`;
 	return null;
 }
 
