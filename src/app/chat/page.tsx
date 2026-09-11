@@ -7,12 +7,14 @@ import { ListShimmer } from "@/components/Shimmer";
 import { ApiError } from "@/lib/api-client";
 import * as chatApi from "@/lib/api/chat.api";
 import type { User } from "@/lib/types";
+import { CreateGroupDialog } from "./CreateGroupDialog";
 
 export default function Chat() {
   const router = useRouter();
   const [empty, setEmpty] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,10 +44,18 @@ export default function Chat() {
 
   return <AppShell title="Messages"><div className="page narrow"><section className="card">
     <h3>No conversations yet</h3>
-    <p className="quiet">Search for a teammate to start your first conversation.</p>
+    <p className="quiet">Search for a teammate to start your first conversation, or create a group.</p>
     <div style={{ margin: "16px 0" }}>
       <UserSearchDropdown onSelect={startConversation} placeholder="Search people by name or email…" autoFocus disabled={creating} />
     </div>
+    <button className="plain" onClick={() => setGroupDialogOpen(true)}>Create a group instead</button>
     {error && <p className="auth-error">{error}</p>}
-  </section></div></AppShell>;
+  </section></div>
+  {groupDialogOpen && (
+    <CreateGroupDialog
+      onClose={() => setGroupDialogOpen(false)}
+      onCreated={(conversation) => router.push(`/chat/${conversation.id}`)}
+    />
+  )}
+  </AppShell>;
 }

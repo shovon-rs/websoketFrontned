@@ -28,9 +28,12 @@ export type PresenceUser = {
   lastSeenAt: string | null;
 };
 
+export type ConversationRole = "admin" | "member";
+
 export type ConversationMember = {
   id: string;
   userId: string;
+  role: ConversationRole;
   user: { id: string; displayName: string; email: string };
 };
 

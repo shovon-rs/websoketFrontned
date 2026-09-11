@@ -1,5 +1,5 @@
 import { apiRequest } from "../api-client";
-import type { Conversation, Message } from "../types";
+import type { Conversation, ConversationRole, Message } from "../types";
 
 export async function listConversations() {
   const data = await apiRequest<{ conversations: Conversation[] }>("/conversations");
@@ -8,6 +8,26 @@ export async function listConversations() {
 
 export async function createConversation(input: { memberIds: string[]; type?: "direct" | "group"; name?: string }) {
   return apiRequest<Conversation>("/conversations", { method: "POST", body: input });
+}
+
+export async function getConversation(id: string) {
+  return apiRequest<Conversation>(`/conversations/${id}`);
+}
+
+export async function renameConversation(id: string, name: string) {
+  return apiRequest<Conversation>(`/conversations/${id}`, { method: "PATCH", body: { name } });
+}
+
+export async function addMembers(id: string, memberIds: string[]) {
+  return apiRequest<Conversation>(`/conversations/${id}/members`, { method: "POST", body: { memberIds } });
+}
+
+export async function removeMember(id: string, userId: string) {
+  return apiRequest<{ promotedAdminId: string | null }>(`/conversations/${id}/members/${userId}`, { method: "DELETE" });
+}
+
+export async function updateMemberRole(id: string, userId: string, role: ConversationRole) {
+  return apiRequest(`/conversations/${id}/members/${userId}/role`, { method: "PATCH", body: { role } });
 }
 
 export async function getMessages(conversationId: string, after?: string) {

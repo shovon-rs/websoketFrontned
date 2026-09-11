@@ -2402,6 +2402,19 @@ button.user-card {
 	background: var(--soft);
 	color: var(--muted);
 }
+.member-role-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 9px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	background: #eef1ee;
+	color: #5b645e;
+	flex-shrink: 0;
+}
 .user-multiselect {
 	position: relative;
 }

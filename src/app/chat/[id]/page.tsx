@@ -29,6 +29,8 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { CreateGroupDialog } from "../CreateGroupDialog";
+import { GroupInfoDialog } from "../GroupInfoDialog";
 
 const PALETTE = ["coral", "blue", "violet", "gold", "green"];
 const REACTION_PREFIX = "__relay_reaction__:";
@@ -85,6 +87,8 @@ export default function ChatConversation({
 	const [text, setText] = useState("");
 	const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 	const [newConvoOpen, setNewConvoOpen] = useState(false);
+	const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+	const [infoOpen, setInfoOpen] = useState(false);
 	const [conversationListOpen, setConversationListOpen] = useState(false);
 	const [creatingConvo, setCreatingConvo] = useState(false);
 	const [convoError, setConvoError] = useState<string | null>(null);
@@ -120,6 +124,11 @@ export default function ChatConversation({
 		() => activeConversation?.members.find((m) => m.userId !== user?.id)?.user,
 		[activeConversation, user],
 	);
+
+	const isGroup = activeConversation?.type === "group";
+	const headerLabel = isGroup
+		? (activeConversation?.name ?? "Group")
+		: (otherMember?.displayName ?? "Conversation");
 
 	// Load the sidebar conversation list once.
 	useEffect(() => {
@@ -267,6 +276,64 @@ export default function ChatConversation({
 			offTypingStop();
 		};
 	}, [conversationId, subscribe, send, user]);
+
+	// Keep the group's name/roster in sync for everyone in the room, not just whoever made the change.
+	useEffect(() => {
+		function updateConversation(id: string, patch: (c: Conversation) => Conversation) {
+			setConversations((prev) => prev.map((c) => (c.id === id ? patch(c) : c)));
+		}
+
+		const offRenamed = subscribe("conversation:updated", (event) => {
+			const payload = event.payload as { conversationId: string; name: string };
+			updateConversation(payload.conversationId, (c) => ({ ...c, name: payload.name }));
+		});
+
+		const offMembersAdded = subscribe("conversation:members-added", (event) => {
+			const payload = event.payload as {
+				conversationId: string;
+				members: Conversation["members"];
+			};
+			updateConversation(payload.conversationId, (c) => ({
+				...c,
+				members: [...c.members, ...payload.members.filter((m) => !c.members.some((existing) => existing.userId === m.userId))],
+			}));
+		});
+
+		const offMemberRemoved = subscribe("conversation:member-removed", (event) => {
+			const payload = event.payload as {
+				conversationId: string;
+				userId: string;
+				promotedAdminId: string | null;
+			};
+			if (payload.userId === user?.id) {
+				// We were removed (or left from another tab/device) — this thread is no longer ours.
+				setConversations((prev) => prev.filter((c) => c.id !== payload.conversationId));
+				if (payload.conversationId === conversationId) router.replace("/chat");
+				return;
+			}
+			updateConversation(payload.conversationId, (c) => ({
+				...c,
+				members: c.members
+					.filter((m) => m.userId !== payload.userId)
+					.map((m) => (m.userId === payload.promotedAdminId ? { ...m, role: "admin" as const } : m)),
+			}));
+		});
+
+		const offRoleChanged = subscribe("conversation:member-role-changed", (event) => {
+			const payload = event.payload as { conversationId: string; userId: string; role: "admin" | "member" };
+			updateConversation(payload.conversationId, (c) => ({
+				...c,
+				members: c.members.map((m) => (m.userId === payload.userId ? { ...m, role: payload.role } : m)),
+			}));
+		});
+
+		return () => {
+			offRenamed();
+			offMembersAdded();
+			offMemberRemoved();
+			offRoleChanged();
+		};
+	}, [subscribe, conversationId, user, router]);
 
 	useEffect(() => {
 		if (!dialing) return undefined;
@@ -481,6 +548,17 @@ export default function ChatConversation({
 								autoFocus
 								disabled={creatingConvo}
 							/>
+							<button
+								type="button"
+								className="plain"
+								style={{ marginTop: 8 }}
+								onClick={() => {
+									setNewConvoOpen(false);
+									setGroupDialogOpen(true);
+								}}
+							>
+								Create a group instead
+							</button>
 							{convoError && (
 								<p className="auth-error" style={{ marginTop: 8 }}>
 									{convoError}
@@ -522,18 +600,16 @@ export default function ChatConversation({
 						<button className="mobile-conversations" onClick={() => setConversationListOpen(true)} aria-label="Show conversations">Conversations</button>
 						<div>
 							<Avatar
-								initials={initialsOf(
-									otherMember?.displayName ?? activeConversation?.name ?? "?",
-								)}
+								initials={initialsOf(headerLabel)}
 								color={colorFor(conversationId)}
 							/>
 							<span>
-								<strong>
-									{otherMember?.displayName ??
-										activeConversation?.name ??
-										"Conversation"}
-								</strong>
-								<small>{activeConversation?.members.length ?? 0} members</small>
+								<strong>{headerLabel}</strong>
+								<small>
+									{isGroup
+										? `${activeConversation?.members.length ?? 0} members`
+										: (otherMember?.email ?? "")}
+								</small>
 							</span>
 						</div>
 						<div>
@@ -548,19 +624,23 @@ export default function ChatConversation({
 							</button>
 							<button
 								onClick={() => startCall("audio")}
-								disabled={!otherMember || dialing !== null}
+								disabled={isGroup || !otherMember || dialing !== null}
 								aria-label="Start audio call"
 							>
 								<Phone />
 							</button>
 							<button
 								onClick={() => startCall("video")}
-								disabled={!otherMember || dialing !== null}
+								disabled={isGroup || !otherMember || dialing !== null}
 								aria-label="Start video call"
 							>
 								<Video />
 							</button>
-							<button aria-label="Conversation information">
+							<button
+								onClick={() => setInfoOpen(true)}
+								disabled={!isGroup}
+								aria-label={isGroup ? "Group info" : "Conversation information"}
+							>
 								<Info />
 							</button>
 						</div>
@@ -846,6 +926,35 @@ export default function ChatConversation({
 					</div>
 				</section>
 			</div>
+
+			{groupDialogOpen && (
+				<CreateGroupDialog
+					onClose={() => setGroupDialogOpen(false)}
+					onCreated={(conversation) => {
+						setConversations((prev) =>
+							prev.some((c) => c.id === conversation.id) ? prev : [conversation, ...prev],
+						);
+						setGroupDialogOpen(false);
+						router.push(`/chat/${conversation.id}`);
+					}}
+				/>
+			)}
+
+			{infoOpen && activeConversation && user && (
+				<GroupInfoDialog
+					conversation={activeConversation}
+					currentUserId={user.id}
+					onClose={() => setInfoOpen(false)}
+					onUpdated={(updated) => {
+						setConversations((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+					}}
+					onLeft={() => {
+						setInfoOpen(false);
+						setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+						router.replace("/chat");
+					}}
+				/>
+			)}
 		</AppShell>
 	);
 }
