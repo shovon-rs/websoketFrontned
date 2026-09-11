@@ -85,6 +85,7 @@ export default function ChatConversation({
 	const [text, setText] = useState("");
 	const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 	const [newConvoOpen, setNewConvoOpen] = useState(false);
+	const [conversationListOpen, setConversationListOpen] = useState(false);
 	const [creatingConvo, setCreatingConvo] = useState(false);
 	const [convoError, setConvoError] = useState<string | null>(null);
 	const [messageSearchOpen, setMessageSearchOpen] = useState(false);
@@ -449,8 +450,9 @@ export default function ChatConversation({
 
 	return (
 		<AppShell title="Messages">
-			<div className="chat-layout">
+			<div className={`chat-layout${conversationListOpen ? " show-conversations" : ""}`}>
 				<aside className="conversation-panel">
+					<button className="mobile-conversations plain" onClick={() => setConversationListOpen(false)}>Back to message</button>
 					<div className="filter-search">
 						<Search size={17} />
 						<input placeholder="Search conversations" />
@@ -502,6 +504,7 @@ export default function ChatConversation({
 						return (
 							<Link
 								href={`/chat/${c.id}`}
+								onClick={() => setConversationListOpen(false)}
 								className={`conversation ${conversationId === c.id ? "selected" : ""}`}
 								key={c.id}
 							>
@@ -516,6 +519,7 @@ export default function ChatConversation({
 				</aside>
 				<section className="thread">
 					<header className="thread-head">
+						<button className="mobile-conversations" onClick={() => setConversationListOpen(true)} aria-label="Show conversations">Conversations</button>
 						<div>
 							<Avatar
 								initials={initialsOf(

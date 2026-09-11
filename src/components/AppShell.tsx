@@ -11,6 +11,7 @@ import {
 	Copy,
 	LayoutDashboard,
 	MapPin,
+	Menu,
 	MessageCircle,
 	PanelsTopLeft,
 	Phone,
@@ -71,6 +72,7 @@ export function AppShell({
 	const { status: authStatus, user, logout } = useAuth();
 	const { status: wsStatus, subscribe } = useWs();
 	const [searchOpen, setSearchOpen] = useState(false);
+	const [menuOpen, setMenuOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [highlighted, setHighlighted] = useState(0);
 	const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -156,7 +158,10 @@ export function AppShell({
 				event.preventDefault();
 				setSearchOpen((open) => !open);
 			}
-			if (event.key === "Escape") setSearchOpen(false);
+			if (event.key === "Escape") {
+				setSearchOpen(false);
+				setMenuOpen(false);
+			}
 		}
 		window.addEventListener("keydown", onShortcut);
 		return () => window.removeEventListener("keydown", onShortcut);
@@ -218,14 +223,17 @@ export function AppShell({
 
 	return (
 		<div className="app-shell">
-			<aside className="sidebar">
+			<aside className={`sidebar${menuOpen ? " menu-open" : ""}`}>
 				<Link className="brand" href="/dashboard">
 					<span className="brand-mark">
 						<Zap size={19} fill="currentColor" />
 					</span>
 					<span>relay</span>
 				</Link>
-				<nav className="nav">
+				<button className="mobile-menu-toggle" type="button" aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} aria-controls="workspace-nav workspace-account" onClick={() => setMenuOpen((open) => !open)}>
+					{menuOpen ? <X size={22} /> : <Menu size={22} />}
+				</button>
+				<nav className="nav" id="workspace-nav" aria-label="Workspace" onClick={() => setMenuOpen(false)}>
 					<p className="nav-label">Workspace</p>
 					{nav
 						.filter((item) => hasRole(user.role, item.minRole ?? "user"))
@@ -244,7 +252,7 @@ export function AppShell({
 							</Link>
 						))}
 				</nav>
-				<div className="sidebar-bottom">
+				<div className="sidebar-bottom" id="workspace-account" onClick={() => setMenuOpen(false)}>
 					<button
 						type="button"
 						onClick={() => {

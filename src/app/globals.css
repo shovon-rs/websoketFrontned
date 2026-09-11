@@ -2490,120 +2490,149 @@ button.user-card {
 .avatar-edit input[type="file"] {
 	display: none;
 }
-@media (max-width: 1000px) {
-	.metric-grid {
-		grid-template-columns: 1fr 1fr;
-	}
-	.tracking-grid {
-		grid-template-columns: 1fr;
-	}
-	.tracking-side {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-	}
-	.comment-bubble {
-		display: none;
-	}
+/* Let content shrink inside flex/grid tracks, including long names and URLs. */
+.app-shell { grid-template-columns: 236px minmax(0, 1fr); }
+.sidebar { height: 100dvh; overflow-y: auto; }
+.chat-layout { grid-template-columns: 310px minmax(0, 1fr); }
+.card, .metric, .card-head > div, .activity-row > div,
+.topbar > div, .user-search, .user-multiselect, .selected-recipient > div,
+.user-search-item > div, .notification-row > span, .chart-body,
+.editor-top > div, .thread-head > div, .thread-head span,
+.composer textarea, .filter-search input, .auth-form, .auth-form form {
+	min-width: 0;
 }
+.page, .topbar, .user-card, .thread, .call-room, .editor-shell, .incoming-call, .user-search-results {
+	overflow-wrap: anywhere;
+}
+.card-head, .welcome, .topbar { gap: 16px; }
+.card-head, .welcome, .top-actions, .settings-form .actions,
+.activity-row, .call-info, .editor-top { flex-wrap: wrap; }
+.activity-row > div { flex-basis: 140px; }
+.top-actions { justify-content: flex-end; }
+.topbar { height: auto; min-height: 86px; padding-top: 14px; padding-bottom: 14px; }
+.icon-btn, .search-btn, .thread-head button, .composer button { flex-shrink: 0; }
+.thread-head { flex: 0 0 auto; min-height: 70px; height: auto; gap: 10px; padding-top: 10px; padding-bottom: 10px; flex-wrap: wrap; }
+.message-meta { flex-wrap: wrap; }
+.message-attachment-image { max-width: min(260px, 100%); }
+.attachment-chip strong { max-width: 100%; }
+.composer > .emoji-picker { display: grid; height: auto; padding: 8px; }
+.composer > .attachment-chip { height: auto; padding: 7px 9px; }
+.share-backdrop { overflow-y: auto; }
+.share-dialog { max-height: calc(100dvh - 36px); overflow-y: auto; }
+.global-search { max-height: calc(88dvh - 18px); overflow-y: auto; }
+.editor-top input { width: 100%; min-width: 0; }
+.editor-top { height: auto; min-height: 70px; gap: 12px; padding-top: 12px; padding-bottom: 12px; }
+.document { padding-left: 24px; padding-right: 24px; }
+.document img, .document video { max-width: 100%; height: auto; }
+.document pre { overflow-x: auto; }
+.toolbar { overflow-x: auto; }
+.toolbar > * { flex-shrink: 0; }
+.video-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: minmax(220px, 1fr); height: auto; min-height: calc(100dvh - 260px); }
+.video-tile { min-width: 0; overflow: hidden; }
+.call-controls { position: static; transform: none; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+.call-room { padding-bottom: max(22px, env(safe-area-inset-bottom)); }
+.admin-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 20px; }
+.sidebar-bottom, .nav, .call-info > * { min-width: 0; }
+.user-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-menu-toggle, .mobile-conversations { display: none; }
+.app-shell:has(.chat-layout) { height: 100dvh; min-height: 0; }
+.main:has(.chat-layout) { display: flex; flex-direction: column; min-height: 0; height: 100dvh; }
+.main:has(.chat-layout) .topbar { flex: 0 0 auto; }
+.main .chat-layout { flex: 1; height: auto; min-height: 0; }
+.settings-form .password-field input { padding-right: 46px; }
+.share-dialog .password-toggle { padding: 0; justify-content: center; border: 0; background: transparent; }
+.chip { max-width: 100%; overflow-wrap: anywhere; }
+button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offset: 3px; }
+
+@media (hover: none) {
+	.message-reaction-actions, .message.mine .message-reaction-actions { position: relative; top: auto; left: auto; right: auto; margin-top: 4px; opacity: 1; pointer-events: auto; }
+	.message-reaction-picker, .message.mine .message-reaction-picker { top: auto; bottom: 34px; left: 0; right: auto; }
+	.message.mine .message-reaction-picker { left: auto; right: 0; }
+}
+
+@media (max-width: 1150px) {
+	.search-btn { width: 40px; justify-content: center; padding: 0; }
+	.search-btn span, .search-btn kbd { display: none; }
+	.metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.dashboard-grid, .bottom { grid-template-columns: minmax(0, 1fr); }
+	.tracking-grid { grid-template-columns: minmax(0, 1fr); }
+	.tracking-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.comment-bubble { display: none; }
+}
+
+@media (max-width: 1000px) {
+	.app-shell { display: block; }
+	.app-shell:has(.chat-layout) { display: flex; flex-direction: column; }
+	.main:has(.chat-layout) { height: auto; flex: 1; }
+	.app-shell:has(.chat-layout) .sidebar { flex-shrink: 0; max-height: 50dvh; overflow-y: auto; }
+	.sidebar { position: relative; width: 100%; height: auto; padding: 10px 18px; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; overflow: visible; }
+	.sidebar .brand { padding: 0; }
+	.mobile-menu-toggle { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #53776b; border-radius: 9px; background: transparent; color: #fff; }
+	.sidebar .nav, .sidebar .sidebar-bottom { display: none; }
+	.sidebar.menu-open .nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; flex-basis: 100%; margin-top: 14px; }
+	.sidebar .nav-label { grid-column: 1 / -1; margin: 8px 12px; padding: 0; }
+	.sidebar.menu-open .sidebar-bottom { display: block; flex-basis: 100%; margin-top: 12px; }
+	.topbar { min-height: 70px; padding: 12px 18px; flex-wrap: wrap; }
+	.top-actions { flex: 1 1 auto; gap: 8px; }
+	.page { padding: 22px; }
+	.chat-layout { height: calc(100dvh - 150px); min-height: 400px; grid-template-columns: 260px minmax(0, 1fr); }
+	.auth { grid-template-columns: minmax(0, 1fr); }
+	.auth-art { display: none; }
+	.auth-form { min-height: 100dvh; }
+	.editor-shell { margin: 18px; }
+}
+
 @media (max-width: 760px) {
-	.app-shell {
-		display: block;
-	}
-	.sidebar {
-		position: static;
-		width: 100%;
-		height: auto;
-		padding: 14px 18px;
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-	}
-	.nav {
-		display: flex;
-		margin: 0 0 0 auto;
-	}
-	.nav-label,
-	.nav a span,
-	.nav a b,
-	.sidebar-bottom {
-		display: none;
-	}
-	.nav a {
-		height: 40px;
-	}
-	.main {
-		display: block;
-	}
-	.topbar {
-		height: auto;
-		min-height: 70px;
-		padding: 14px 18px;
-	}
-	.search-btn {
-		display: none;
-	}
-	.page {
-		padding: 18px;
-	}
-	.metric-grid,
-	.dashboard-grid,
-	.bottom {
-		grid-template-columns: 1fr;
-	}
-	.welcome {
-		align-items: flex-start;
-		gap: 14px;
-	}
-	.welcome .primary {
-		display: none;
-	}
-	.chat-layout {
-		grid-template-columns: 1fr;
-		height: calc(100dvh - 132px);
-	}
-	.conversation-panel {
-		display: none;
-	}
-	.thread {
-		height: 100%;
-	}
-	.messages {
-		padding: 18px;
-	}
-	.message {
-		max-width: 88%;
-	}
-	.tracking-side {
-		grid-template-columns: 1fr;
-	}
-	.auth {
-		grid-template-columns: 1fr;
-	}
-	.auth-art {
-		display: none;
-	}
-	.video-grid {
-		grid-template-columns: 1fr;
-		grid-template-rows: repeat(4, 220px);
-		height: auto;
-	}
-	.call-room {
-		overflow: auto;
-	}
-	.editor-shell {
-		margin: 10px;
-	}
-	.document {
-		padding: 30px 24px;
-		margin: 0;
-	}
-	.document h1 {
-		font-size: 27px;
-	}
-	.toolbar {
-		overflow: auto;
-	}
-	.topbar p {
-		display: none;
-	}
+	.page { padding: 18px; }
+	.topbar h1 { font-size: 19px; }
+	.topbar > div:first-child { flex: 1 1 100%; }
+	.top-actions { justify-content: flex-start; }
+	.welcome { align-items: flex-start; }
+	.welcome h2 { font-size: 24px; }
+	.shimmer-card-grid, .tracking-side { grid-template-columns: minmax(0, 1fr); }
+	.chat-layout { display: block; height: calc(100dvh - 210px); min-height: 380px; }
+	.conversation-panel { display: none; height: 100%; }
+	.show-conversations .conversation-panel { display: block; }
+	.show-conversations .thread { display: none; }
+	.thread { height: 100%; }
+	.mobile-conversations { display: inline-flex; align-items: center; min-height: 44px; }
+	.thread-head { padding: 8px 12px; }
+	.thread-head > div { gap: 6px; }
+	.thread-head button { min-height: 40px; }
+	.messages { padding: 18px 12px; }
+	.message { max-width: 94%; }
+	.composer { padding: 10px 12px max(10px, env(safe-area-inset-bottom)); }
+	.composer > div { padding: 0 4px; }
+	.composer button { min-width: 34px; min-height: 38px; }
+	.emoji-picker { right: 12px; bottom: 84px; }
+	.message-reaction-actions, .message.mine .message-reaction-actions { position: relative; top: auto; left: auto; right: auto; margin-top: 4px; opacity: 1; pointer-events: auto; }
+	.message-reaction-picker, .message.mine .message-reaction-picker { top: auto; bottom: 34px; left: 0; right: auto; }
+	.message.mine .message-reaction-picker { left: auto; right: 0; }
+	.message-search { padding: 10px 12px; flex-wrap: wrap; }
+	.map-card, .map-overlay, .tracking-map { min-height: 360px; }
+	.call-room { padding: 18px 12px max(18px, env(safe-area-inset-bottom)); min-height: 0; }
+	.video-grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(200px, 35dvh); min-height: 0; }
+	.editor-shell { margin: 12px; }
+	.editor-top { padding: 12px; }
+	.document { padding: 28px 18px; margin: 0; }
+	.document h1 { font-size: 27px; }
+	.incoming-call { top: 12px; right: 12px; left: 12px; min-width: 0; flex-wrap: wrap; }
+	.incoming-call > div { min-width: 0; }
+	.auth-form { padding: 28px 20px; }
+	/* 16px prevents focus zoom on iOS without disabling user zoom. */
+	.auth-form input, .settings-form input, .settings-form textarea,
+	.share-dialog input, .share-dialog label > input, .share-dialog label > select,
+	.share-dialog .password-field input, .composer textarea,
+	.filter-search input, .global-search-input input, .message-search input { font-size: 16px; }
+}
+
+@media (max-width: 420px) {
+	.metric-grid { grid-template-columns: minmax(0, 1fr); }
+	.page { padding: 14px; }
+	.card { padding: 16px; }
+	.people-section, .notification-card { padding: 0; }
+	.notification-row { flex-wrap: wrap; gap: 10px; padding: 14px; }
+	.notification-row > span:nth-child(2) { flex-basis: 160px; }
+	.share-dialog { padding: 16px; }
+	.primary, .danger { height: auto; min-height: 42px; padding-top: 8px; padding-bottom: 8px; }
 }

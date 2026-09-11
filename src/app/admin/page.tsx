@@ -29,7 +29,7 @@ export default function AdminPage() {
   return (
     <AppShell title="Admin" subtitle="Manage users, announcements, and live-stream requests.">
       <div className="page narrow">
-        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+        <div className="admin-tabs">
           <button className={tab === "users" ? "primary" : "plain"} onClick={() => setTab("users")}>Users</button>
           {canManageAnnouncements && (
             <button className={tab === "announcements" ? "primary" : "plain"} onClick={() => setTab("announcements")}>
