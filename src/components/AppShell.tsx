@@ -75,6 +75,11 @@ export function AppShell({
 	const { status: wsStatus, subscribe } = useWs();
 	const [searchOpen, setSearchOpen] = useState(false);
 	const [menuOpen, setMenuOpen] = useState(false);
+	const [menuRetained, setMenuRetained] = useState(false);
+	const menuVisible = menuOpen || menuRetained;
+	const sidebarRef = useRef<HTMLElement>(null);
+	const mainRef = useRef<HTMLElement>(null);
+	const menuToggleRef = useRef<HTMLButtonElement>(null);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [highlighted, setHighlighted] = useState(0);
 	const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -109,6 +114,61 @@ export function AppShell({
 			`${item.label} ${item.keywords}`.toLocaleLowerCase().includes(query),
 		);
 	}, [searchQuery, searchablePages]);
+
+	useEffect(() => {
+		setMenuOpen(false);
+	}, [path]);
+
+	useEffect(() => {
+		if (menuOpen) {
+			setMenuRetained(true);
+			return;
+		}
+		// Keep the overlay mounted until its closing animation finishes.
+		const delay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500;
+		const timer = window.setTimeout(() => setMenuRetained(false), delay);
+		return () => window.clearTimeout(timer);
+	}, [menuOpen]);
+
+	useEffect(() => {
+		if (!menuVisible) return;
+		const mobile = window.matchMedia("(max-width: 1000px)");
+		if (!mobile.matches) {
+			setMenuOpen(false);
+			return;
+		}
+		const main = mainRef.current;
+		const previousOverflow = document.body.style.overflow;
+		document.body.style.overflow = "hidden";
+		main?.setAttribute("inert", "");
+		menuToggleRef.current?.focus();
+		function onResize() {
+			if (!mobile.matches) setMenuOpen(false);
+		}
+		function trapFocus(event: KeyboardEvent) {
+			if (event.key !== "Tab") return;
+			const controls = sidebarRef.current?.querySelectorAll<HTMLElement>("a[href], button:not([disabled])");
+			if (!controls?.length) return;
+			const first = controls[0];
+			const last = controls[controls.length - 1];
+			if (event.shiftKey && document.activeElement === first) {
+				event.preventDefault();
+				last.focus();
+			} else if (!event.shiftKey && document.activeElement === last) {
+				event.preventDefault();
+				first.focus();
+			}
+		}
+		mobile.addEventListener("change", onResize);
+		document.addEventListener("keydown", trapFocus);
+		return () => {
+			document.body.style.overflow = previousOverflow;
+			main?.removeAttribute("inert");
+			mobile.removeEventListener("change", onResize);
+			document.removeEventListener("keydown", trapFocus);
+			if (mobile.matches) menuToggleRef.current?.focus();
+		};
+	}, [menuVisible]);
 
 	useEffect(() => {
 		if (authStatus === "unauthenticated") router.replace("/login");
@@ -225,14 +285,14 @@ export function AppShell({
 
 	return (
 		<div className="app-shell">
-			<aside className={`sidebar${menuOpen ? " menu-open" : ""}`}>
-				<Link className="brand" href="/dashboard">
+			<aside ref={sidebarRef} className={`sidebar${menuVisible ? " menu-open" : ""}${menuVisible && !menuOpen ? " menu-closing" : ""}`}>
+				<Link className="brand" href="/dashboard" onClick={() => setMenuOpen(false)}>
 					<span className="brand-mark">
 						<Zap size={19} fill="currentColor" />
 					</span>
 					<span>relay</span>
 				</Link>
-				<button className="mobile-menu-toggle" type="button" aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} aria-controls="workspace-nav workspace-account" onClick={() => setMenuOpen((open) => !open)}>
+				<button ref={menuToggleRef} className="mobile-menu-toggle" type="button" aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} aria-controls="workspace-nav workspace-account" onClick={() => setMenuOpen((open) => !open)}>
 					{menuOpen ? <X size={22} /> : <Menu size={22} />}
 				</button>
 				<nav className="nav" id="workspace-nav" aria-label="Workspace" onClick={() => setMenuOpen(false)}>
@@ -290,7 +350,7 @@ export function AppShell({
 					</button>
 				</div>
 			</aside>
-			<main className="main">
+			<main ref={mainRef} className="main">
 				<header className="topbar">
 					<div>
 						<h1>{title}</h1>
