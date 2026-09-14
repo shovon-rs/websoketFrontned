@@ -797,6 +797,23 @@ a.activity-row:hover {
 .activity-row > svg {
 	color: #aab0ac;
 }
+.activity-row.selectable {
+	width: 100%;
+	background: transparent;
+	border: 0;
+	cursor: pointer;
+	text-align: left;
+	margin: 0 -20px;
+	padding: 11px 20px;
+	border-radius: 8px;
+	transition: background 0.15s;
+}
+.activity-row.selectable:hover {
+	background: #f7f9f7;
+}
+.activity-row.selectable.selected {
+	background: #eef4f0;
+}
 .tiny-icon {
 	width: 34px;
 	height: 34px;

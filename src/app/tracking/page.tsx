@@ -63,6 +63,10 @@ export default function Tracking() {
   const lastSentRef = useRef(0);
   const sessionIdRef = useRef<string | null>(null);
   const startRequestedRef = useRef(false);
+  // The very first fix arrives before the server confirms the new sessionId (tracking:start
+  // is fire-and-forget), so sessionIdRef.current is still null when it's captured below —
+  // stash it here and flush it once tracking:started tells us the sessionId to use.
+  const pendingPointRef = useRef<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     sessionIdRef.current = sessionId;
@@ -109,7 +113,17 @@ export default function Tracking() {
     for (const s of sharedSessions) send("tracking:join", { sessionId: s.sessionId });
   }, [wsStatus, sessionId, sharedSessions, send]);
 
-  useEffect(() => subscribe("tracking:started", (event) => setSessionId((event.payload as { sessionId: string }).sessionId)), [subscribe]);
+  useEffect(() => {
+    return subscribe("tracking:started", (event) => {
+      const newSessionId = (event.payload as { sessionId: string }).sessionId;
+      setSessionId(newSessionId);
+      if (pendingPointRef.current) {
+        send("location:update", { sessionId: newSessionId, ...pendingPointRef.current });
+        lastSentRef.current = Date.now();
+        pendingPointRef.current = null;
+      }
+    });
+  }, [subscribe, send]);
 
   useEffect(() => {
     return subscribe("location:update", (event) => {
@@ -160,14 +174,16 @@ export default function Tracking() {
     // Requesting the position triggers the browser's native permission prompt — our consent gate.
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
+        const point = { lat: position.coords.latitude, lng: position.coords.longitude };
+
         if (!startRequestedRef.current) {
           startRequestedRef.current = true;
+          pendingPointRef.current = point;
           send("tracking:start", {});
           setActive(true);
           setStartedAt(Date.now());
         }
 
-        const point = { lat: position.coords.latitude, lng: position.coords.longitude };
         if (lastPointRef.current) setDistanceKm((d) => d + haversineKm(lastPointRef.current!, point));
         lastPointRef.current = point;
 
@@ -198,6 +214,7 @@ export default function Tracking() {
     setStartedAt(null);
     setViewers([]);
     lastPointRef.current = null;
+    pendingPointRef.current = null;
   }, [sessionId, send, stopWatch]);
 
   useEffect(() => () => stopWatch(), [stopWatch]);

@@ -131,10 +131,10 @@ export function AdminLiveLocationsTab() {
           <aside className="tracking-side">
             {list.map((s) => {
               const hasPosition = !!positions[s.sessionId];
+              const isSelected = focusId === s.sessionId;
               return (
                 <button
-                  className="activity-row"
-                  style={{ width: "100%", background: "transparent", border: 0, cursor: "pointer", textAlign: "left" }}
+                  className={`activity-row selectable${isSelected ? " selected" : ""}`}
                   key={s.sessionId}
                   onClick={() => setFocusId(s.sessionId)}
                 >
