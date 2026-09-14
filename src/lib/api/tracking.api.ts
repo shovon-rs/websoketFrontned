@@ -1,5 +1,5 @@
 import { apiRequest } from "../api-client";
-import type { OwnedTrackingSession, SharedTrackingSession, TrackingSession, User } from "../types";
+import type { AdminTrackingSession, OwnedTrackingSession, SharedTrackingSession, TrackingSession, User } from "../types";
 
 export async function createSession() {
   return apiRequest<TrackingSession>("/tracking/sessions", { method: "POST" });
@@ -7,6 +7,11 @@ export async function createSession() {
 
 export async function listSessions() {
   return apiRequest<{ owned: OwnedTrackingSession[]; shared: SharedTrackingSession[] }>("/tracking/sessions");
+}
+
+// super_admin only — every currently active session across all users.
+export async function listAllActiveSessions() {
+  return apiRequest<{ sessions: AdminTrackingSession[] }>("/tracking/sessions/admin");
 }
 
 export async function getSession(id: string) {

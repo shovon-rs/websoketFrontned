@@ -5,6 +5,7 @@ import { Chart } from "@/components/Chart";
 import { Shimmer } from "@/components/Shimmer";
 import * as dashboardApi from "@/lib/api/dashboard.api";
 import { useAuth } from "@/lib/auth-context";
+import { isSuperAdmin } from "@/lib/roles";
 import type { DashboardMetrics } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
 import {
@@ -131,7 +132,10 @@ export default function Dashboard() {
 							<em>See call history</em>
 						</div>
 					</Link>
-					<div className="metric">
+					<Link
+						href={isSuperAdmin(user?.role) ? "/admin?tab=live-locations" : "/tracking"}
+						className="metric"
+					>
 						<span className="metric-icon green">
 							<Radio />
 						</span>
@@ -146,12 +150,10 @@ export default function Dashboard() {
 							</strong>
 							<em>
 								<i className={wsStatus === "connected" ? "pulse" : ""} />{" "}
-								{metrics
-									? new Date(metrics.generatedAt).toLocaleTimeString()
-									: ""}
+								{isSuperAdmin(user?.role) ? "See live locations" : "Share your location"}
 							</em>
 						</div>
-					</div>
+					</Link>
 				</section>
 				<div className="dashboard-grid">
 					<section className="card activity-chart">

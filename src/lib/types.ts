@@ -110,6 +110,11 @@ export type SharedTrackingSession = TrackingSession & {
   locations: TrackingLocation[];
 };
 
+export type AdminTrackingSession = TrackingSession & {
+  user: User;
+  locations: TrackingLocation[];
+};
+
 export type DocumentRecord = {
   id: string;
   ownerId: string;
