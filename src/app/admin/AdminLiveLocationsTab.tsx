@@ -5,6 +5,7 @@ import { TrackingMap, TrackingMapMarker } from "@/components/TrackingMap";
 import { Avatar } from "@/components/Avatar";
 import { useWs } from "@/lib/ws-context";
 import type { User } from "@/lib/types";
+import { MapPin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 const PALETTE = ["#e35e40", "#407ac1", "#745bca", "#bc7923", "#33845e"];
@@ -112,43 +113,70 @@ export function AdminLiveLocationsTab() {
   }, [list, positions]);
 
   return (
-    <section className="card">
-      <div className="card-head">
+    <div className="admin-locations">
+      <div className="admin-locations-head">
         <div>
-          <h3>Live locations</h3>
-          <p>Every user currently sharing their location</p>
+          <span className="eyebrow">Super admin</span>
+          <h2>Live locations</h2>
+          <p className="quiet">Every user currently sharing their location, updated in real time.</p>
         </div>
+        <span className="live-pill"><i className={markers.length > 0 ? "" : "dim"} /> {markers.length} of {list.length} live</span>
       </div>
+
       {error && <p className="auth-error" role="alert">{error}</p>}
-      {loading && <p className="quiet">Loading…</p>}
-      {!loading && list.length === 0 && <p className="quiet">No one is currently sharing their location.</p>}
-      {!loading && list.length > 0 && (
-        <div className="tracking-grid" style={{ marginTop: 12 }}>
-          <div className="map-card"><div className="map-overlay">
-            <TrackingMap markers={markers} focusId={focusId} />
-            <div className="map-status"><i className={markers.length > 0 ? "pulse" : ""} /><strong>Live</strong><small>{markers.length} on map</small></div>
-          </div></div>
-          <aside className="tracking-side">
-            {list.map((s) => {
-              const hasPosition = !!positions[s.sessionId];
-              const isSelected = focusId === s.sessionId;
-              return (
-                <button
-                  className={`activity-row selectable${isSelected ? " selected" : ""}`}
-                  key={s.sessionId}
-                  onClick={() => setFocusId(s.sessionId)}
-                >
-                  <Avatar initials={s.user.displayName.slice(0, 2).toUpperCase()} color="blue" online={hasPosition} size="sm" />
-                  <div>
-                    <strong>{s.user.displayName}</strong>
-                    <small>{hasPosition ? "Live" : "Waiting for location…"}</small>
-                  </div>
-                </button>
-              );
-            })}
-          </aside>
-        </div>
-      )}
-    </section>
+
+      <div className="tracking-grid">
+        <section className="map-card"><div className="map-overlay">
+          <TrackingMap markers={markers} focusId={focusId} />
+          <div className="map-status">
+            <i className={markers.length > 0 ? "pulse" : ""} />
+            <strong>{markers.length > 0 ? "Live" : "No live positions yet"}</strong>
+            <small>{markers.length} on map</small>
+          </div>
+        </div></section>
+
+        <aside className="tracking-side">
+          <section className="card admin-locations-list">
+            <div className="card-head">
+              <div>
+                <h3>Sharing now</h3>
+                <p>{list.length} active session{list.length === 1 ? "" : "s"}</p>
+              </div>
+            </div>
+
+            {loading && <p className="quiet">Loading…</p>}
+
+            {!loading && list.length === 0 && (
+              <div className="empty-state">
+                <MapPin size={22} />
+                <p className="quiet">No one is currently sharing their location.</p>
+              </div>
+            )}
+
+            {!loading && list.length > 0 && (
+              <div className="admin-locations-rows">
+                {list.map((s) => {
+                  const hasPosition = !!positions[s.sessionId];
+                  const isSelected = focusId === s.sessionId;
+                  return (
+                    <button
+                      className={`activity-row selectable${isSelected ? " selected" : ""}`}
+                      key={s.sessionId}
+                      onClick={() => setFocusId(s.sessionId)}
+                    >
+                      <Avatar initials={s.user.displayName.slice(0, 2).toUpperCase()} color="blue" online={hasPosition} size="sm" />
+                      <div>
+                        <strong>{s.user.displayName}</strong>
+                        <small>{hasPosition ? "Live" : "Waiting for location…"}</small>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </aside>
+      </div>
+    </div>
   );
 }

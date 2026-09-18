@@ -45,7 +45,7 @@ function AdminPageContent() {
 
   return (
     <AppShell title="Admin" subtitle="Manage users, announcements, and live-stream requests.">
-      <div className="page narrow">
+      <div className={tab === "live-locations" ? "page" : "page narrow"}>
         <div className="admin-tabs">
           <button className={tab === "users" ? "primary" : "plain"} onClick={() => setTab("users")}>Users</button>
           {canManageAnnouncements && (
