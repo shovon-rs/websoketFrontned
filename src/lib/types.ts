@@ -115,13 +115,47 @@ export type AdminTrackingSession = TrackingSession & {
   locations: TrackingLocation[];
 };
 
+export type DocumentRole = "owner" | "editor" | "viewer";
+
+export type DocumentVisibility = "private" | "public";
+
+export type DocumentCollaborator = {
+  id: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  role: "editor" | "viewer";
+};
+
+export type DocumentSummary = {
+  id: string;
+  title: string;
+  ownerId: string;
+  updatedAt: string;
+  role: DocumentRole;
+  visibility: DocumentVisibility;
+};
+
 export type DocumentRecord = {
   id: string;
-  ownerId: string;
   title: string;
-  content: string;
+  ownerId: string;
+  createdAt: string;
   updatedAt: string;
+  role: DocumentRole;
+  visibility: DocumentVisibility;
+  collaborators: DocumentCollaborator[];
 };
+
+export type DocumentVersionSummary = {
+  id: string;
+  title: string;
+  authorId: string;
+  author: { displayName: string };
+  createdAt: string;
+};
+
+export type DocumentVersionFull = DocumentVersionSummary & { html: string };
 
 export type CallType = "audio" | "video";
 export type CallStatus = "ringing" | "active" | "ended" | "missed" | "rejected";

@@ -51,7 +51,7 @@ const nav: NavItem[] = [
 	{ href: "/tasks", label: "Tasks", icon: ClipboardList },
 	{ href: "/projects", label: "Projects", icon: FolderKanban },
 	{ href: "/calendar", label: "Calendar", icon: CalendarDays },
-	{ href: "/collab/launch-plan", label: "Documents", icon: PanelsTopLeft },
+	{ href: "/collab", label: "Documents", icon: PanelsTopLeft },
 	{ href: "/call/team-sync", label: "Calls", icon: Phone },
 	{ href: "/live", label: "Live", icon: Radio },
 	{ href: "/admin", label: "Admin", icon: ShieldCheck, minRole: "admin" },

@@ -1810,6 +1810,17 @@ a.attachment-chip {
 	background: transparent;
 	width: 30px;
 	height: 30px;
+	border-radius: 6px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+.toolbar button.is-active {
+	background: #eef1ed;
+	color: var(--accent);
+}
+.toolbar button:disabled {
+	opacity: 0.4;
 }
 .toolbar svg {
 	width: 15px;
@@ -1829,6 +1840,27 @@ a.attachment-chip {
 	margin: 54px auto;
 	padding-bottom: 80px;
 	outline: 0;
+}
+/* Tiptap mounts its own contenteditable root (.ProseMirror / .tiptap) inside the EditorContent
+   wrapper above — style that directly so it reads as a full document page (Google-Docs-like:
+   no visible box, click anywhere below the text to place the cursor there) instead of the
+   browser's default focus outline shrink-wrapped to just the typed content. */
+.document .ProseMirror,
+.document .tiptap {
+	outline: none;
+	border: none;
+	min-height: calc(100vh - 340px);
+	font-size: 13px;
+	line-height: 1.8;
+	color: #4f5a54;
+	cursor: text;
+}
+.document .ProseMirror p.is-editor-empty:first-child::before {
+	content: attr(data-placeholder);
+	color: #a7b0ab;
+	float: left;
+	height: 0;
+	pointer-events: none;
 }
 .document h1 {
 	font: 800 34px Manrope;
@@ -1858,6 +1890,46 @@ a.attachment-chip {
 	padding: 16px 20px;
 	font: 600 13px Manrope;
 	color: #714e43;
+}
+.document ul, .document ol {
+	font-size: 13px;
+	line-height: 1.8;
+	color: #4f5a54;
+	padding-left: 22px;
+}
+.collaboration-carets__caret {
+	position: relative;
+	margin-left: -1px;
+	margin-right: -1px;
+	border-left: 1px solid;
+	border-right: 1px solid;
+	word-break: normal;
+	pointer-events: none;
+}
+.collaboration-carets__label {
+	position: absolute;
+	top: -1.4em;
+	left: -1px;
+	font-size: 9px;
+	font-weight: 650;
+	line-height: 1;
+	white-space: nowrap;
+	border-radius: 4px 4px 4px 0;
+	padding: 2px 5px;
+	color: #fff;
+	user-select: none;
+	pointer-events: none;
+}
+.version-preview {
+	max-height: 55vh;
+	overflow-y: auto;
+	margin-top: 10px;
+	padding: 14px 16px;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: #fafbf9;
+	font-size: 13px;
+	line-height: 1.7;
 }
 .comment-bubble {
 	position: absolute;
@@ -2719,11 +2791,43 @@ button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offs
 .color-swatch.selected { border-color: var(--ink); box-shadow: 0 0 0 2px #fff inset; }
 
 /* Priority badges */
-.priority-badge { display: inline-flex; align-items: center; border-radius: 20px; padding: 2px 9px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+.priority-badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 20px; padding: 2px 9px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
 .priority-badge.low { background: #eef1ee; color: #5b645e; }
 .priority-badge.medium { background: #e6effb; color: #2f5aa1; }
 .priority-badge.high { background: #fff4df; color: #a26e29; }
 .priority-badge.urgent { background: #fbe4e1; color: #c0402c; }
+
+/* Document download menu */
+.download-menu {
+	position: absolute;
+	top: calc(100% + 6px);
+	right: 0;
+	z-index: 20;
+	display: flex;
+	flex-direction: column;
+	min-width: 200px;
+	background: #fff;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	box-shadow: 0 8px 24px rgba(23, 35, 30, 0.12);
+	padding: 6px;
+}
+.download-menu button {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	border: 0;
+	background: transparent;
+	text-align: left;
+	padding: 8px 10px;
+	border-radius: 7px;
+	font-size: 12px;
+	color: var(--ink);
+	cursor: pointer;
+}
+.download-menu button:hover {
+	background: #f4f6f3;
+}
 
 /* Kanban board */
 .board { display: flex; gap: 14px; align-items: flex-start; overflow-x: auto; padding-bottom: 8px; }
