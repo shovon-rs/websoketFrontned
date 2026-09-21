@@ -6,7 +6,8 @@ import { ApiError } from "@/lib/api-client";
 import * as tasksApi from "@/lib/api/tasks.api";
 import { useAuth } from "@/lib/auth-context";
 import { isManager } from "@/lib/roles";
-import type { Task, TaskStatus, User } from "@/lib/types";
+import { formatDueDate, toDateTimeLocalValue } from "@/lib/time";
+import type { Task, TaskPriority, TaskStatus, User } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
 import { FileText, Paperclip, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -16,6 +17,13 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   todo: "To do",
   in_progress: "In progress",
   done: "Done",
+};
+
+const PRIORITY_LABEL: Record<TaskPriority, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  urgent: "Urgent",
 };
 
 const TASK_NOTIFICATION_KINDS = new Set(["task:assigned", "task:status-changed", "task:comment-new"]);
@@ -171,6 +179,16 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
               Assigned to{" "}
               <strong>{task.assignees.map((a) => a.displayName).join(", ")}</strong>
             </span>
+            {task.priority && (
+              <span>
+                Priority <strong className={`priority-badge ${task.priority}`}>{PRIORITY_LABEL[task.priority]}</strong>
+              </span>
+            )}
+            {task.dueDate && (
+              <span>
+                Due <strong>{formatDueDate(task.dueDate)}</strong>
+              </span>
+            )}
             <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
               Status
               <select
@@ -262,6 +280,27 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
             </div>
           </form>
         </section>
+
+        <section className="card">
+          <div className="card-head">
+            <div>
+              <h3>Assignment history</h3>
+            </div>
+          </div>
+          {task.assignmentEvents.length === 0 && <p className="quiet">No assignment changes yet.</p>}
+          {task.assignmentEvents.map((event) => (
+            <div className="task-comment" key={event.id}>
+              <div className="task-comment-head">
+                <strong>
+                  {event.actor.displayName}
+                  {event.action === "assigned" ? " assigned " : " unassigned "}
+                  {event.user.id === event.actor.id ? "themself" : event.user.displayName}
+                </strong>
+                <time>{new Date(event.createdAt).toLocaleString()}</time>
+              </div>
+            </div>
+          ))}
+        </section>
       </div>
 
       {editOpen && (
@@ -288,6 +327,7 @@ function EditTaskDialog({
   onSaved: (task: Task) => void;
 }) {
   const [assignees, setAssignees] = useState<User[]>(task.assignees);
+  const [priority, setPriority] = useState<TaskPriority>(task.priority ?? "medium");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -303,6 +343,7 @@ function EditTaskDialog({
     const form = new FormData(e.currentTarget);
     const title = String(form.get("title") ?? "").trim();
     const description = String(form.get("description") ?? "").trim();
+    const dueDateRaw = String(form.get("dueDate") ?? "").trim();
 
     setSubmitting(true);
     try {
@@ -310,6 +351,8 @@ function EditTaskDialog({
         title,
         description,
         assigneeIds: assignees.map((a) => a.id),
+        priority,
+        dueDate: dueDateRaw ? new Date(dueDateRaw).toISOString() : undefined,
       });
       onSaved(updated);
     } catch (err) {
@@ -344,6 +387,19 @@ function EditTaskDialog({
             <div style={{ marginTop: 7 }}>
               <UserMultiSelect selected={assignees} onChange={setAssignees} placeholder="Search by name or email…" />
             </div>
+          </label>
+          <label>
+            Priority
+            <select className="role-select" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </label>
+          <label>
+            Due date
+            <input name="dueDate" type="datetime-local" defaultValue={toDateTimeLocalValue(task.dueDate)} />
           </label>
           {error && (
             <p className="share-error" role="alert">

@@ -199,6 +199,8 @@ export type ConnectionStatus = "connecting" | "connected" | "reconnecting" | "di
 
 export type TaskStatus = "todo" | "in_progress" | "done";
 
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
+
 export type TaskPerson = { id: string; displayName: string; email: string };
 
 export type TaskAttachment = {
@@ -216,6 +218,16 @@ export type TaskComment = {
   author: TaskPerson;
 };
 
+export type TaskAssignmentAction = "assigned" | "unassigned";
+
+export type TaskAssignmentEvent = {
+  id: string;
+  action: TaskAssignmentAction;
+  createdAt: string;
+  user: TaskPerson;
+  actor: TaskPerson;
+};
+
 export type Task = {
   id: string;
   title: string;
@@ -226,6 +238,43 @@ export type Task = {
   assignees: TaskPerson[];
   attachments: TaskAttachment[];
   comments: TaskComment[];
+  assignmentEvents: TaskAssignmentEvent[];
   createdAt: string;
   updatedAt: string;
+  projectId: string | null;
+  sectionId: string | null;
+  dueDate: string | null;
+  startDate: string | null;
+  priority: TaskPriority;
+  order: number;
+};
+
+export type ProjectRole = "admin" | "member";
+
+export type ProjectMember = { id: string; displayName: string; email: string; role: ProjectRole };
+
+export type Section = { id: string; projectId: string; name: string; order: number };
+
+export type Project = {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  creatorId: string;
+  createdAt: string;
+  updatedAt: string;
+  members: ProjectMember[];
+  sections: Section[];
+  taskCount?: number;
+};
+
+export type ProjectSummary = {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  memberCount: number;
+  sectionCount: number;
+  taskCount: number;
+  createdAt: string;
 };

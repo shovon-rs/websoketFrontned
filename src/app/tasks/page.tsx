@@ -6,7 +6,8 @@ import { ApiError } from "@/lib/api-client";
 import * as tasksApi from "@/lib/api/tasks.api";
 import { useAuth } from "@/lib/auth-context";
 import { isManager } from "@/lib/roles";
-import type { Task, TaskPerson, TaskStatus, User } from "@/lib/types";
+import { formatDueDate } from "@/lib/time";
+import type { Task, TaskPerson, TaskPriority, TaskStatus, User } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
 import { FileText, Paperclip, MessageSquare, Plus, X } from "lucide-react";
 import Link from "next/link";
@@ -49,7 +50,7 @@ export default function TasksPage() {
 
   const load = useCallback((status: TaskStatus | "all") => {
     tasksApi
-      .listTasks(status === "all" ? undefined : status)
+      .listTasks(status === "all" ? undefined : { status })
       .then(setTasks)
       .catch((err) => setError(err instanceof ApiError ? err.message : "Could not load tasks."));
   }, []);
@@ -99,6 +100,11 @@ export default function TasksPage() {
               </div>
               <span className={`task-status ${task.status}`}>{STATUS_LABEL[task.status]}</span>
               <span className="quiet" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                {task.dueDate && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    Due {formatDueDate(task.dueDate)}
+                  </span>
+                )}
                 {task.attachments.length > 0 && (
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                     <Paperclip size={13} /> {task.attachments.length}
@@ -133,6 +139,7 @@ const MAX_ATTACHMENTS = 10;
 function CreateTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (task: Task) => void }) {
   const [assignees, setAssignees] = useState<User[]>([]);
   const [status, setStatus] = useState<TaskStatus>("todo");
+  const [priority, setPriority] = useState<TaskPriority>("medium");
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -161,6 +168,7 @@ function CreateTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreat
     const form = new FormData(e.currentTarget);
     const title = String(form.get("title") ?? "").trim();
     const description = String(form.get("description") ?? "").trim();
+    const dueDateRaw = String(form.get("dueDate") ?? "").trim();
 
     setSubmitting(true);
     try {
@@ -169,6 +177,8 @@ function CreateTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreat
         description,
         assigneeIds: assignees.map((a) => a.id),
         status,
+        priority,
+        dueDate: dueDateRaw ? new Date(dueDateRaw).toISOString() : undefined,
       });
 
       if (files.length === 0) {
@@ -234,6 +244,19 @@ function CreateTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreat
               <option value="in_progress">In progress</option>
               <option value="done">Done</option>
             </select>
+          </label>
+          <label>
+            Priority
+            <select className="role-select" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </label>
+          <label>
+            Due date
+            <input name="dueDate" type="datetime-local" />
           </label>
           <label>
             Attachments

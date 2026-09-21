@@ -6,10 +6,12 @@ import type { AppNotification, Role } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
 import {
 	Bell,
+	CalendarDays,
 	Check,
 	ChevronDown,
 	ClipboardList,
 	Copy,
+	FolderKanban,
 	LayoutDashboard,
 	MapPin,
 	Menu,
@@ -47,6 +49,8 @@ const nav: NavItem[] = [
 	{ href: "/notifications", label: "Notifications", icon: Bell },
 	{ href: "/tracking", label: "Live tracking", icon: MapPin },
 	{ href: "/tasks", label: "Tasks", icon: ClipboardList },
+	{ href: "/projects", label: "Projects", icon: FolderKanban },
+	{ href: "/calendar", label: "Calendar", icon: CalendarDays },
 	{ href: "/collab/launch-plan", label: "Documents", icon: PanelsTopLeft },
 	{ href: "/call/team-sync", label: "Calls", icon: Phone },
 	{ href: "/live", label: "Live", icon: Radio },

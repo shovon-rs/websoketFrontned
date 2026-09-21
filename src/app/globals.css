@@ -2704,6 +2704,64 @@ button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offs
 .task-comment-head time { font-size: 9px; color: var(--muted); }
 .task-comment p { margin: 0; font-size: 12px; white-space: pre-wrap; }
 
+/* Projects */
+.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.project-card { display: block; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 18px; text-decoration: none; color: inherit; transition: border-color 150ms ease, box-shadow 150ms ease; }
+.project-card:hover { border-color: #d7dbd4; box-shadow: 0 4px 14px rgba(23, 35, 30, 0.06); }
+.project-card-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+.project-card-head strong { font: 700 14px Manrope; }
+.project-card p { margin: 0 0 12px; font-size: 12px; }
+.project-card-stats { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 10px; }
+.project-card-stats span { display: inline-flex; align-items: center; gap: 4px; }
+.color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.color-swatch-row { display: flex; gap: 8px; margin-top: 8px; }
+.color-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; padding: 0; }
+.color-swatch.selected { border-color: var(--ink); box-shadow: 0 0 0 2px #fff inset; }
+
+/* Priority badges */
+.priority-badge { display: inline-flex; align-items: center; border-radius: 20px; padding: 2px 9px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+.priority-badge.low { background: #eef1ee; color: #5b645e; }
+.priority-badge.medium { background: #e6effb; color: #2f5aa1; }
+.priority-badge.high { background: #fff4df; color: #a26e29; }
+.priority-badge.urgent { background: #fbe4e1; color: #c0402c; }
+
+/* Kanban board */
+.board { display: flex; gap: 14px; align-items: flex-start; overflow-x: auto; padding-bottom: 8px; }
+.board-column { flex: 0 0 270px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-height: 120px; }
+.board-column-head { display: flex; align-items: center; gap: 8px; }
+.board-column-head strong { font: 700 13px Manrope; flex: 1; }
+.board-column-head button { margin-left: auto; background: transparent; border: 0; color: var(--muted); }
+.board-column-body { display: flex; flex-direction: column; gap: 8px; min-height: 24px; }
+.board-card { background: var(--soft); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; cursor: grab; }
+.board-card:active { cursor: grabbing; }
+.board-card-link { text-decoration: none; color: inherit; }
+.board-card-link strong { font-size: 12px; display: block; }
+.board-card-meta { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 10px; }
+.board-card-avatars { display: flex; margin-top: 8px; }
+.board-card-avatars .avatar { margin-right: -7px; border: 2px solid #f2f4f0; }
+.board-card-avatars .avatar-more { width: 30px; height: 30px; font-size: 9px; border-radius: 50%; display: inline-grid; place-items: center; border: 2px solid #f2f4f0; margin-right: -7px; }
+.board-add-task { justify-content: flex-start; border: 1px dashed var(--line); border-radius: 8px; height: 34px; }
+.board-add-column { flex: 0 0 220px; align-items: flex-start; justify-content: flex-start; }
+.board-add-column form { width: 100%; }
+.board-add-column input { width: 100%; border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; font-size: 12px; }
+.board-add-column > button.plain { border: 1px dashed var(--line); border-radius: 8px; height: 34px; width: 100%; justify-content: center; }
+
+/* Calendar */
+.calendar-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.calendar-toolbar strong { font: 700 15px Manrope; min-width: 160px; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.calendar-weekday { text-align: center; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 4px; }
+.calendar-cell { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px; min-height: 96px; display: flex; flex-direction: column; gap: 6px; }
+.calendar-cell.outside { background: #fafbf9; color: var(--muted); }
+.calendar-cell.outside .calendar-cell-date { color: #b6bcb8; }
+.calendar-cell.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.calendar-cell-date { font-size: 11px; font-weight: 700; }
+.calendar-chip-list { display: flex; flex-direction: column; gap: 4px; }
+.calendar-chip { display: block; background: var(--soft); border-left: 3px solid var(--line); border-radius: 4px; padding: 3px 6px; font-size: 10px; text-decoration: none; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-chip:hover { background: #e9ece6; }
+.calendar-chip-more { align-self: flex-start; background: transparent; border: 0; color: var(--accent); font-size: 10px; font-weight: 600; padding: 0; }
+.calendar-chip-time { font-weight: 700; margin-right: 4px; opacity: 0.75; }
+
 @media (hover: none) {
 	.message-reaction-actions, .message.mine .message-reaction-actions { position: relative; top: auto; left: auto; right: auto; margin-top: 4px; opacity: 1; pointer-events: auto; }
 	.message-reaction-picker, .message.mine .message-reaction-picker { top: auto; bottom: 34px; left: 0; right: auto; }
@@ -2794,6 +2852,10 @@ button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offs
 	.message.mine .message-reaction-picker { left: auto; right: 0; }
 	.message-search { padding: 10px 12px; flex-wrap: wrap; }
 	.map-card, .map-overlay, .tracking-map { min-height: 360px; }
+	.board-column { flex-basis: 240px; }
+	.calendar-cell { min-height: 72px; padding: 6px; }
+	.calendar-weekday { font-size: 9px; }
+	.calendar-toolbar strong { min-width: 0; }
 	.call-room { padding: 18px 12px max(18px, env(safe-area-inset-bottom)); min-height: 0; }
 	.video-grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(200px, 35dvh); min-height: 0; }
 	.editor-shell { margin: 12px; }
