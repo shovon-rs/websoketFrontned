@@ -1457,16 +1457,23 @@ a.metric:hover .metric-icon {
 .messages {
 	flex: 1;
 	min-height: 0;
-	overflow: auto;
+	overflow-y: auto;
+	overflow-x: hidden;
 	padding: 24px 9%;
 	background: #fbfcfa;
-	/* Messenger/WhatsApp-style bottom anchoring: a short conversation hugs the bottom of the
-	   pane (empty space above), instead of starting at the top with empty space below. Long
-	   conversations still scroll normally — this only affects how content settles when it's
-	   shorter than the visible area. */
+	/* Plain flex column, no justify-content:flex-end here — that combined with overflow:auto is a
+	   known Chromium/WebKit bug where wheel/trackpad scrolling stops working once content
+	   overflows (dragging the scrollbar thumb still works, but scroll input is silently
+	   swallowed). Bottom-anchoring a short conversation is done instead via margin-top:auto on
+	   .messages-inner below, which achieves the same visual result without breaking scroll. */
 	display: flex;
 	flex-direction: column;
-	justify-content: flex-end;
+}
+.messages-inner {
+	margin-top: auto;
+	display: flex;
+	flex-direction: column;
+	min-height: min-content;
 }
 .day-divider {
 	text-align: center;

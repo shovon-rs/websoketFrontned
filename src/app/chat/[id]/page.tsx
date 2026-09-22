@@ -723,6 +723,7 @@ export default function ChatConversation({
 					)}
 					</AnimatePresence>
 					<div className="messages" ref={messagesContainerRef}>
+					<div className="messages-inner">
 						{normalizedSearch && visibleMessages.length === 0 && (
 							<p className="message-search-empty">
 								No messages match &ldquo;{messageSearch.trim()}&rdquo;.
@@ -905,6 +906,7 @@ export default function ChatConversation({
 						)}
 						</AnimatePresence>
 						<div ref={messagesEndRef} aria-hidden="true" />
+					</div>
 					</div>
 					<div className="composer">
 						{attachment && (
