@@ -824,8 +824,20 @@ a.metric:hover {
 .dashboard-grid {
 	display: grid;
 	grid-template-columns: minmax(0, 2fr) minmax(250px, 1fr);
+	grid-template-rows: auto auto;
 	gap: 14px;
 	margin-top: 14px;
+}
+.dashboard-grid .activity-chart {
+	grid-row: 1 / 3;
+}
+@media (max-width: 1150px) {
+	.dashboard-grid .activity-chart {
+		grid-row: auto;
+	}
+}
+.your-tasks .notification-stats {
+	margin: 4px 0 14px;
 }
 .card {
 	background: #fff;

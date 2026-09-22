@@ -4,6 +4,7 @@ import { Avatar } from "@/components/Avatar";
 import { Chart } from "@/components/Chart";
 import { Shimmer } from "@/components/Shimmer";
 import * as dashboardApi from "@/lib/api/dashboard.api";
+import * as tasksApi from "@/lib/api/tasks.api";
 import { useAuth } from "@/lib/auth-context";
 import { fadeInUp, hoverLift, staggerContainer, staggerItem, tapScale } from "@/lib/motion";
 import { isSuperAdmin } from "@/lib/roles";
@@ -22,7 +23,9 @@ import {
 	Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+const TASK_NOTIFICATION_KINDS = new Set(["task:assigned", "task:status-changed", "task:comment-new"]);
 
 function AnimatedMetric({ value }: { value: number | null }) {
 	const display = useCountUp(value);
@@ -46,6 +49,7 @@ export default function Dashboard() {
 	const [chartData, setChartData] = useState<
 		{ date: string; count: number }[] | null
 	>(null);
+	const [taskSummary, setTaskSummary] = useState<{ todo: number; done: number } | null>(null);
 
 	// AppShell redirects to /login when unauthenticated, but it still renders this component's
 	// effects on the way there — wait for a real session so we don't fire a doomed request.
@@ -63,6 +67,27 @@ export default function Dashboard() {
 		dashboardApi.getMessageActivity().then(setChartData);
 	}, [authStatus]);
 
+	// There's no "assigned to me" filter on the tasks endpoint, so pull the full list and narrow
+	// it down client-side to whatever's assigned to the signed-in user.
+	const loadTaskSummary = useCallback(() => {
+		if (!user) return;
+		tasksApi
+			.listTasks()
+			.then((all) => {
+				const mine = all.filter((task) => task.assignees.some((a) => a.id === user.id));
+				setTaskSummary({
+					todo: mine.filter((task) => task.status !== "done").length,
+					done: mine.filter((task) => task.status === "done").length,
+				});
+			})
+			.catch(() => {});
+	}, [user]);
+
+	useEffect(() => {
+		if (authStatus !== "authenticated") return;
+		loadTaskSummary();
+	}, [authStatus, loadTaskSummary]);
+
 	// Re-join on every (re)connect — room membership lives on the server connection, not the client.
 	useEffect(() => {
 		if (wsStatus === "connected") send("dashboard:join", {});
@@ -75,6 +100,14 @@ export default function Dashboard() {
 			),
 		[subscribe],
 	);
+
+	useEffect(() => {
+		return subscribe("notification:new", (event) => {
+			const payload = event.payload as { data?: { kind?: string } };
+			if (!payload.data?.kind || !TASK_NOTIFICATION_KINDS.has(payload.data.kind)) return;
+			loadTaskSummary();
+		});
+	}, [subscribe, loadTaskSummary]);
 
 	const firstName = user?.displayName?.split(" ")[0] ?? "there";
 	const totalMessages = chartData?.reduce((sum, d) => sum + d.count, 0) ?? null;
@@ -223,6 +256,44 @@ export default function Dashboard() {
 						</p>
 						<Link className="text-link" href="/people">
 							See who's online <ArrowUpRight size={16} />
+						</Link>
+					</motion.section>
+					<motion.section
+						className="card your-tasks"
+						variants={fadeInUp}
+						initial="hidden"
+						animate="visible"
+						transition={{ delay: 0.08 }}
+					>
+						<div className="card-head">
+							<div>
+								<h3>Your tasks</h3>
+								<p>Assigned to you across every project</p>
+							</div>
+						</div>
+						{taskSummary ? (
+							<div className="notification-stats">
+								<div className="notification-stat">
+									<strong>{taskSummary.todo}</strong>
+									<small>Need to do</small>
+								</div>
+								<div className="notification-stat">
+									<strong>{taskSummary.done}</strong>
+									<small>Completed</small>
+								</div>
+							</div>
+						) : (
+							<div className="notification-stats">
+								<div className="notification-stat">
+									<Shimmer className="shimmer-metric" />
+								</div>
+								<div className="notification-stat">
+									<Shimmer className="shimmer-metric" />
+								</div>
+							</div>
+						)}
+						<Link className="text-link" href="/tasks">
+							View your tasks <ArrowUpRight size={16} />
 						</Link>
 					</motion.section>
 				</div>
