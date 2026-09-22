@@ -878,6 +878,27 @@ a.project-card:hover {
 	color: #59635e;
 	font-size: 10px;
 }
+.select-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 34px;
+	padding: 0 14px;
+	color: var(--ink);
+	font-weight: 600;
+	cursor: pointer;
+	transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out),
+		background var(--dur-base) var(--ease-out);
+}
+.select-btn:hover {
+	border-color: #c9caf5;
+	background: #fafaff;
+	box-shadow: var(--shadow-xs);
+}
+.select-btn:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
 .plain {
 	border: 0;
 	color: var(--accent-deep);
@@ -2581,6 +2602,42 @@ a.attachment-chip {
 	font-size: 10px;
 	line-height: 1.5;
 }
+.attachment-preview-dialog {
+	width: min(720px, 100%);
+}
+.attachment-preview-body {
+	margin-bottom: 18px;
+	border-radius: 10px;
+	overflow: hidden;
+	background: var(--soft);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 200px;
+}
+.attachment-preview-body img {
+	display: block;
+	width: 100%;
+	max-height: 60vh;
+	object-fit: contain;
+}
+.attachment-preview-body iframe {
+	width: 100%;
+	height: 60vh;
+	border: 0;
+}
+.attachment-preview-fallback {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding: 48px 20px;
+	color: var(--muted);
+	text-align: center;
+}
+.attachment-preview-fallback svg {
+	color: #c3c4e6;
+}
 .share-dialog header > button {
 	display: grid;
 	place-items: center;
@@ -3455,6 +3512,19 @@ button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offs
 }
 .task-attachment-row:last-child { border-bottom: 0; }
 .task-attachment-row > svg { color: #aab0ac; flex-shrink: 0; }
+.task-attachment-thumb {
+	flex-shrink: 0;
+	width: 36px;
+	height: 36px;
+	border-radius: 7px;
+	overflow: hidden;
+	background: var(--soft);
+}
+.task-attachment-thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
 .task-attachment-row a {
 	flex: 1;
 	min-width: 0;
@@ -3495,7 +3565,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offs
 .task-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .task-filters button { border-radius: 20px; padding: 6px 14px; font-size: 11px; font-weight: 600; border: 1px solid var(--line); background: #fff; color: var(--ink); }
 .task-filters button.primary { border-color: transparent; }
-.task-meta { display: flex; flex-wrap: wrap; gap: 16px; margin: 4px 0 18px; color: var(--muted); font-size: 11px; }
 .task-comment { padding: 11px 0; border-bottom: 1px solid #eff1ee; }
 .task-comment:last-of-type { border-bottom: 0; }
 .task-comment-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
@@ -3890,13 +3959,70 @@ a.task-row:hover {
 	}
 }
 
-/* Task detail: status badge swap + priority/due pills get a touch of depth. */
-.task-status-swap {
-	display: inline-flex;
-}
-.task-meta .priority-badge,
-.task-meta strong {
+/* Task detail sidebar: status/priority pills get a touch of depth. */
+.task-detail-field .priority-badge,
+.task-detail-field strong {
 	transition: box-shadow var(--dur-base) var(--ease-out);
+}
+.task-detail-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 300px;
+	gap: 18px;
+	align-items: start;
+	max-width: 1200px;
+}
+@media (max-width: 900px) {
+	.task-detail-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+.task-detail-main {
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+}
+.task-detail-sidebar h3 {
+	margin: 0 0 4px;
+	font: 700 13px Manrope;
+}
+.task-detail-field {
+	padding: 14px 0;
+	border-bottom: 1px solid var(--line);
+}
+.task-detail-field:first-of-type {
+	padding-top: 10px;
+}
+.task-detail-field:last-child {
+	border-bottom: 0;
+	padding-bottom: 0;
+}
+.task-detail-label {
+	display: block;
+	font-size: 9.5px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--muted);
+	margin-bottom: 9px;
+}
+.task-detail-field-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+.task-detail-field-row .role-select {
+	flex: 1;
+	min-width: 0;
+}
+.task-detail-assignee {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	padding: 5px 0;
+}
+.task-detail-assignee strong {
+	font-size: 11.5px;
+	font-weight: 600;
 }
 
 /* Attachment rows: hover affordance (button already had one; the row itself
@@ -3910,16 +4036,6 @@ a.task-row:hover {
 	transform: translateX(2px);
 }
 
-/* Assignee avatar row on the task detail page. */
-.task-assignee-row {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-}
-.task-assignee-row .avatar {
-	margin-right: -8px;
-	border: 2px solid #fff;
-}
 
 /* Project cards: press feedback to go with the existing hover-lift. */
 a.project-card:active {

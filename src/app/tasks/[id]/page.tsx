@@ -9,10 +9,10 @@ import { useAuth } from "@/lib/auth-context";
 import { dialogBackdrop, dialogPanel, staggerContainer, staggerItem } from "@/lib/motion";
 import { isManager } from "@/lib/roles";
 import { formatDueDate, toDateTimeLocalValue } from "@/lib/time";
-import type { Task, TaskPriority, TaskStatus, User } from "@/lib/types";
+import type { Task, TaskAttachment, TaskPriority, TaskStatus, User } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
 import { AnimatePresence, motion } from "framer-motion";
-import { FileText, Paperclip, Trash2, X } from "lucide-react";
+import { Eye, FileText, Paperclip, Pencil, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -58,6 +58,7 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
   const [editOpen, setEditOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<TaskAttachment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function load() {
@@ -176,81 +177,171 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
         )
       }
     >
-      <div className="page narrow">
-        <section className="card">
-          <div className="card-head">
-            <div>
-              <h3>{task.title}</h3>
-              {task.description && <p>{task.description}</p>}
-            </div>
-            {canManage && (
-              <button className="plain" onClick={() => setEditOpen(true)}>
-                Edit
-              </button>
-            )}
-          </div>
-
-          <div className="task-meta">
-            <span>
-              Assigned to <strong>{task.assignees.map((a) => a.displayName).join(", ")}</strong>
-              {task.assignees.length > 0 && (
-                <motion.span
-                  className="task-assignee-row"
-                  style={{ marginLeft: 8 }}
-                  variants={staggerContainer}
-                  initial="hidden"
-                  animate="visible"
-                >
-                  {task.assignees.slice(0, 6).map((a) => (
-                    <motion.span key={a.id} variants={staggerItem} style={{ display: "inline-flex" }}>
-                      <Avatar initials={initialsOf(a.displayName)} color={colorFor(a.id)} size="sm" />
-                    </motion.span>
-                  ))}
-                </motion.span>
+      <div className="page task-detail-grid">
+        <div className="task-detail-main">
+          <section className="card">
+            <div className="card-head">
+              <div>
+                <h3>{task.title}</h3>
+                {task.description && <p>{task.description}</p>}
+              </div>
+              {canManage && (
+                <button className="select-btn" onClick={() => setEditOpen(true)}>
+                  <Pencil size={13} /> Edit
+                </button>
               )}
-            </span>
-            {task.priority && (
-              <span>
-                Priority{" "}
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.strong
-                    key={task.priority}
-                    className={`priority-badge ${task.priority}`}
-                    initial={{ opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.85 }}
-                    transition={{ duration: 0.18 }}
-                  >
-                    {PRIORITY_LABEL[task.priority]}
-                  </motion.strong>
-                </AnimatePresence>
-              </span>
+            </div>
+
+            {error && (
+              <p className="auth-error" role="alert">
+                {error}
+              </p>
             )}
-            {task.dueDate && (
-              <span>
-                Due <strong>{formatDueDate(task.dueDate)}</strong>
-              </span>
+          </section>
+
+          <section className="card">
+            <div className="card-head">
+              <div>
+                <h3>Attachments — {task.attachments.length}</h3>
+              </div>
+              {canManage && (
+                <>
+                  <button className="select-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                    <Paperclip size={13} /> {uploading ? "Uploading…" : "Add files"}
+                  </button>
+                  <input ref={fileInputRef} type="file" multiple hidden onChange={onFilesSelected} />
+                </>
+              )}
+            </div>
+            {uploadError && (
+              <p className="auth-error" role="alert">
+                {uploadError}
+              </p>
             )}
-            <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              Status
-              <span className="task-status-swap">
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span
-                    key={task.status}
-                    className={`task-status ${task.status}`}
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 4 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {STATUS_LABEL[task.status]}
-                  </motion.span>
-                </AnimatePresence>
-              </span>
+            {task.attachments.length === 0 && <p className="quiet">No attachments yet.</p>}
+            <AnimatePresence initial={false}>
+              {task.attachments.map((a) => (
+                <motion.div
+                  className="task-attachment-row"
+                  key={a.id}
+                  layout
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -8, transition: { duration: 0.15 } }}
+                  transition={{ duration: 0.24 }}
+                >
+                  {a.mimeType.startsWith("image/") ? (
+                    <span className="task-attachment-thumb">
+                      <img src={a.url} alt="" />
+                    </span>
+                  ) : (
+                    <FileText size={18} />
+                  )}
+                  <a href={a.url} target="_blank" rel="noreferrer">
+                    <strong>{a.fileName}</strong>
+                    <small>{Math.ceil(a.size / 1024)} KB</small>
+                  </a>
+                  <button onClick={() => setPreviewAttachment(a)} aria-label={`Preview ${a.fileName}`}>
+                    <Eye size={14} />
+                  </button>
+                  {canManage && (
+                    <button onClick={() => onDeleteAttachment(a.id)} aria-label={`Remove ${a.fileName}`}>
+                      <X size={14} />
+                    </button>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </section>
+
+          <section className="card">
+            <div className="card-head">
+              <div>
+                <h3>Comments — {task.comments.length}</h3>
+              </div>
+            </div>
+            <AnimatePresence initial={false}>
+              {task.comments.map((c) => (
+                <motion.div
+                  className="task-comment"
+                  key={c.id}
+                  layout
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.24 }}
+                >
+                  <div className="task-comment-head">
+                    <strong>{c.author.displayName}</strong>
+                    <time>{new Date(c.createdAt).toLocaleString()}</time>
+                  </div>
+                  <p>{c.body}</p>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            <form className="settings-form" onSubmit={onAddComment} style={{ marginTop: 14 }}>
+              <label>
+                Add a comment
+                <textarea
+                  value={commentBody}
+                  onChange={(e) => setCommentBody(e.target.value)}
+                  maxLength={2000}
+                  required
+                />
+              </label>
+              <div className="actions">
+                <button className="primary" disabled={commentSubmitting || !commentBody.trim()}>
+                  {commentSubmitting ? "Posting…" : "Post comment"}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="card">
+            <div className="card-head">
+              <div>
+                <h3>Assignment history</h3>
+              </div>
+            </div>
+            {task.assignmentEvents.length === 0 && <p className="quiet">No assignment changes yet.</p>}
+            {task.assignmentEvents.map((event) => (
+              <div className="task-comment" key={event.id}>
+                <div className="task-comment-head">
+                  <strong>
+                    {event.actor.displayName}
+                    {event.action === "assigned" ? " assigned " : " unassigned "}
+                    {event.user.id === event.actor.id ? "themself" : event.user.displayName}
+                  </strong>
+                  <time>{new Date(event.createdAt).toLocaleString()}</time>
+                </div>
+              </div>
+            ))}
+          </section>
+        </div>
+
+        <aside className="card task-detail-sidebar">
+          <h3>Details</h3>
+
+          <div className="task-detail-field">
+            <span className="task-detail-label">Status</span>
+            <div className="task-detail-field-row">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={task.status}
+                  className={`task-status ${task.status}`}
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {STATUS_LABEL[task.status]}
+                </motion.span>
+              </AnimatePresence>
               <select
                 className="role-select"
                 value={task.status}
                 onChange={(e) => onStatusChange(e.target.value as TaskStatus)}
+                aria-label="Change status"
               >
                 {(Object.keys(STATUS_LABEL) as TaskStatus[]).map((s) => (
                   <option key={s} value={s}>
@@ -258,125 +349,50 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
           </div>
 
-          {error && (
-            <p className="auth-error" role="alert">
-              {error}
-            </p>
-          )}
-        </section>
-
-        <section className="card">
-          <div className="card-head">
-            <div>
-              <h3>Attachments — {task.attachments.length}</h3>
+          {task.priority && (
+            <div className="task-detail-field">
+              <span className="task-detail-label">Priority</span>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.strong
+                  key={task.priority}
+                  className={`priority-badge ${task.priority}`}
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.85 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  {PRIORITY_LABEL[task.priority]}
+                </motion.strong>
+              </AnimatePresence>
             </div>
-            {canManage && (
-              <>
-                <button className="plain" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-                  <Paperclip size={14} /> {uploading ? "Uploading…" : "Add files"}
-                </button>
-                <input ref={fileInputRef} type="file" multiple hidden onChange={onFilesSelected} />
-              </>
+          )}
+
+          <div className="task-detail-field">
+            <span className="task-detail-label">Due date</span>
+            {task.dueDate ? <strong>{formatDueDate(task.dueDate)}</strong> : <span className="quiet">No due date</span>}
+          </div>
+
+          <div className="task-detail-field">
+            <span className="task-detail-label">
+              Assigned to {task.assignees.length > 0 && `(${task.assignees.length})`}
+            </span>
+            {task.assignees.length === 0 ? (
+              <span className="quiet">No one yet</span>
+            ) : (
+              <motion.div variants={staggerContainer} initial="hidden" animate="visible">
+                {task.assignees.map((a) => (
+                  <motion.div className="task-detail-assignee" key={a.id} variants={staggerItem}>
+                    <Avatar initials={initialsOf(a.displayName)} color={colorFor(a.id)} size="sm" />
+                    <strong>{a.displayName}</strong>
+                  </motion.div>
+                ))}
+              </motion.div>
             )}
           </div>
-          {uploadError && (
-            <p className="auth-error" role="alert">
-              {uploadError}
-            </p>
-          )}
-          {task.attachments.length === 0 && <p className="quiet">No attachments yet.</p>}
-          <AnimatePresence initial={false}>
-            {task.attachments.map((a) => (
-              <motion.div
-                className="task-attachment-row"
-                key={a.id}
-                layout
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -8, transition: { duration: 0.15 } }}
-                transition={{ duration: 0.24 }}
-              >
-                <FileText size={18} />
-                <a href={a.url} target="_blank" rel="noreferrer">
-                  <strong>{a.fileName}</strong>
-                  <small>{Math.ceil(a.size / 1024)} KB</small>
-                </a>
-                {canManage && (
-                  <button onClick={() => onDeleteAttachment(a.id)} aria-label={`Remove ${a.fileName}`}>
-                    <X size={14} />
-                  </button>
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </section>
-
-        <section className="card">
-          <div className="card-head">
-            <div>
-              <h3>Comments — {task.comments.length}</h3>
-            </div>
-          </div>
-          <AnimatePresence initial={false}>
-            {task.comments.map((c) => (
-              <motion.div
-                className="task-comment"
-                key={c.id}
-                layout
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.24 }}
-              >
-                <div className="task-comment-head">
-                  <strong>{c.author.displayName}</strong>
-                  <time>{new Date(c.createdAt).toLocaleString()}</time>
-                </div>
-                <p>{c.body}</p>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <form className="settings-form" onSubmit={onAddComment} style={{ marginTop: 14 }}>
-            <label>
-              Add a comment
-              <textarea
-                value={commentBody}
-                onChange={(e) => setCommentBody(e.target.value)}
-                maxLength={2000}
-                required
-              />
-            </label>
-            <div className="actions">
-              <button className="primary" disabled={commentSubmitting || !commentBody.trim()}>
-                {commentSubmitting ? "Posting…" : "Post comment"}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="card">
-          <div className="card-head">
-            <div>
-              <h3>Assignment history</h3>
-            </div>
-          </div>
-          {task.assignmentEvents.length === 0 && <p className="quiet">No assignment changes yet.</p>}
-          {task.assignmentEvents.map((event) => (
-            <div className="task-comment" key={event.id}>
-              <div className="task-comment-head">
-                <strong>
-                  {event.actor.displayName}
-                  {event.action === "assigned" ? " assigned " : " unassigned "}
-                  {event.user.id === event.actor.id ? "themself" : event.user.displayName}
-                </strong>
-                <time>{new Date(event.createdAt).toLocaleString()}</time>
-              </div>
-            </div>
-          ))}
-        </section>
+        </aside>
       </div>
 
       <AnimatePresence>
@@ -389,6 +405,57 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
               setEditOpen(false);
             }}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {previewAttachment && (
+          <motion.div
+            className="share-backdrop"
+            variants={dialogBackdrop}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setPreviewAttachment(null);
+            }}
+          >
+            <motion.section
+              className="share-dialog attachment-preview-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="attachment-preview-title"
+              variants={dialogPanel}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <header>
+                <div>
+                  <h2 id="attachment-preview-title">{previewAttachment.fileName}</h2>
+                  <p>{Math.ceil(previewAttachment.size / 1024)} KB</p>
+                </div>
+                <button onClick={() => setPreviewAttachment(null)} aria-label="Close preview">
+                  <X size={18} />
+                </button>
+              </header>
+              <div className="attachment-preview-body">
+                {previewAttachment.mimeType.startsWith("image/") ? (
+                  <img src={previewAttachment.url} alt={previewAttachment.fileName} />
+                ) : previewAttachment.mimeType === "application/pdf" ? (
+                  <iframe src={previewAttachment.url} title={previewAttachment.fileName} />
+                ) : (
+                  <div className="attachment-preview-fallback">
+                    <FileText size={36} />
+                    <p className="quiet">Preview isn&rsquo;t available for this file type.</p>
+                  </div>
+                )}
+              </div>
+              <a className="primary wide" href={previewAttachment.url} target="_blank" rel="noreferrer">
+                Open in new tab
+              </a>
+            </motion.section>
+          </motion.div>
         )}
       </AnimatePresence>
     </AppShell>
