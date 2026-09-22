@@ -4,8 +4,10 @@ import { Avatar } from "@/components/Avatar";
 import { UserSearchDropdown } from "@/components/UserSearchDropdown";
 import { ApiError } from "@/lib/api-client";
 import * as chatApi from "@/lib/api/chat.api";
+import * as usersApi from "@/lib/api/users.api";
 import { useAuth } from "@/lib/auth-context";
-import type { Conversation, Message, User } from "@/lib/types";
+import { formatLastSeen } from "@/lib/time";
+import type { Conversation, Message, PresenceUser, User } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
 import { makeEventId } from "@/lib/ws-envelope";
 import {
@@ -132,6 +134,26 @@ export default function ChatConversation({
 	const lastTypingSentRef = useRef(0);
 	const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+	const [presence, setPresence] = useState<Map<string, PresenceUser>>(new Map());
+
+	const loadPresence = useCallback(() => {
+		usersApi.getPresence().then((users) => {
+			setPresence(new Map(users.map((u) => [u.id, u])));
+		});
+	}, []);
+
+	// Messenger/WhatsApp-style presence: who's online right now and when everyone else was last
+	// active, kept fresh on a short poll and refreshed immediately on every (re)connect.
+	useEffect(() => {
+		loadPresence();
+		const timer = window.setInterval(loadPresence, 15000);
+		return () => window.clearInterval(timer);
+	}, [loadPresence]);
+
+	useEffect(() => {
+		if (wsStatus === "connected") loadPresence();
+	}, [wsStatus, loadPresence]);
+
 	const activeConversation = conversations.find((c) => c.id === conversationId);
 
 	const memberById = useMemo(() => {
@@ -144,6 +166,7 @@ export default function ChatConversation({
 		() => activeConversation?.members.find((m) => m.userId !== user?.id)?.user,
 		[activeConversation, user],
 	);
+	const otherPresence = otherMember ? presence.get(otherMember.id) : undefined;
 
 	const isGroup = activeConversation?.type === "group";
 	const headerLabel = isGroup
@@ -626,7 +649,11 @@ export default function ChatConversation({
 										onClick={() => setConversationListOpen(false)}
 										className={`conversation ${conversationId === c.id ? "selected" : ""}`}
 									>
-										<Avatar initials={initialsOf(label)} color={colorFor(c.id)} />
+										<Avatar
+											initials={initialsOf(label)}
+											color={colorFor(c.id)}
+											online={c.type === "group" ? undefined : presence.get(other?.id ?? "")?.online}
+										/>
 										<div>
 											<strong>{label}</strong>
 											<small>{preview}</small>
@@ -644,13 +671,21 @@ export default function ChatConversation({
 							<Avatar
 								initials={initialsOf(headerLabel)}
 								color={colorFor(conversationId)}
+								online={isGroup ? undefined : otherPresence?.online}
 							/>
 							<span>
 								<strong>{headerLabel}</strong>
 								<small>
-									{isGroup
-										? `${activeConversation?.members.length ?? 0} members`
-										: (otherMember?.email ?? "")}
+									{isGroup ? (
+										`${activeConversation?.members.length ?? 0} members`
+									) : (
+										<>
+											<i className={otherPresence?.online ? "" : "offline"} />
+											{otherPresence?.online
+												? "Active now"
+												: formatLastSeen(otherPresence?.lastSeenAt ?? null)}
+										</>
+									)}
 								</small>
 							</span>
 						</div>

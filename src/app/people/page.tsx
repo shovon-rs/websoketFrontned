@@ -3,18 +3,20 @@
 import { AppShell } from "@/components/AppShell";
 import { AuthErrorMessage } from "@/components/AuthErrorMessage";
 import { Avatar } from "@/components/Avatar";
-import { ListShimmer } from "@/components/Shimmer";
+import { Shimmer } from "@/components/Shimmer";
 import { ApiError } from "@/lib/api-client";
 import * as chatApi from "@/lib/api/chat.api";
 import * as usersApi from "@/lib/api/users.api";
 import { fadeInUp, staggerContainer, staggerItem } from "@/lib/motion";
-import { formatLastSeen, formatOnlineDuration } from "@/lib/time";
+import { formatLastSeen } from "@/lib/time";
 import type { PresenceUser } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
 import { motion } from "framer-motion";
-import { MessageCircle, UsersRound } from "lucide-react";
+import { MessageCircle, Search, UsersRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+type Filter = "all" | "online" | "offline";
 
 function initialsOf(name: string): string {
 	const parts = name.trim().split(/\s+/);
@@ -28,6 +30,8 @@ export default function PeoplePage() {
 	const [loading, setLoading] = useState(true);
 	const [openingUserId, setOpeningUserId] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [filter, setFilter] = useState<Filter>("all");
+	const [query, setQuery] = useState("");
 
 	const loadPeople = useCallback(async () => {
 		try {
@@ -75,106 +79,122 @@ export default function PeoplePage() {
 		}
 	}
 
-	const online = people.filter((person) => person.online);
-	const offline = people.filter((person) => !person.online);
+	const online = useMemo(() => people.filter((person) => person.online), [people]);
+	const offline = useMemo(() => people.filter((person) => !person.online), [people]);
+
+	const filtered = useMemo(() => {
+		const base = filter === "online" ? online : filter === "offline" ? offline : people;
+		const q = query.trim().toLocaleLowerCase();
+		if (!q) return base;
+		return base.filter(
+			(person) =>
+				person.displayName.toLocaleLowerCase().includes(q) ||
+				person.email.toLocaleLowerCase().includes(q),
+		);
+	}, [filter, online, offline, people, query]);
 
 	return (
 		<AppShell
 			title="People"
 			subtitle="See who is available and start a conversation."
 		>
-			<div className="page narrow people-page">
+			<div className="page people-page">
 				<AuthErrorMessage message={error} />
+				<div className="people-toolbar">
+					<div className="people-tabs" role="tablist" aria-label="Filter people">
+						{(
+							[
+								["all", "All", people.length],
+								["online", "Online", online.length],
+								["offline", "Offline", offline.length],
+							] as const
+						).map(([key, label, count]) => (
+							<button
+								key={key}
+								type="button"
+								role="tab"
+								aria-selected={filter === key}
+								className={filter === key ? "active" : ""}
+								onClick={() => setFilter(key)}
+							>
+								{key === "online" && <span className="people-tab-dot online" />}
+								{key === "offline" && <span className="people-tab-dot offline" />}
+								{label}
+								<em>{count}</em>
+							</button>
+						))}
+					</div>
+					<div className="people-search">
+						<Search size={15} />
+						<input
+							value={query}
+							onChange={(event) => setQuery(event.target.value)}
+							placeholder="Search people by name or email…"
+						/>
+					</div>
+				</div>
+
 				{loading ? (
-					<>
-						<section className="card people-section">
-							<ListShimmer rows={3} />
-						</section>
-						<section className="card people-section">
-							<ListShimmer rows={3} />
-						</section>
-					</>
+					<div className="people-grid">
+						{Array.from({ length: 8 }, (_, index) => (
+							<div className="people-tile shimmer-people-tile" key={index}>
+								<Shimmer className="shimmer-avatar" style={{ width: 52, height: 52, borderRadius: "50%" }} />
+								<Shimmer className="shimmer-line medium" />
+								<Shimmer className="shimmer-line short" />
+							</div>
+						))}
+					</div>
 				) : (
-					<motion.div variants={staggerContainer} initial="hidden" animate="visible">
-						<PeopleSection
-							title="Online"
-							count={online.length}
-							people={online}
-							openingUserId={openingUserId}
-							onOpenChat={openChat}
-						/>
-						<PeopleSection
-							title="Offline"
-							count={offline.length}
-							people={offline}
-							openingUserId={openingUserId}
-							onOpenChat={openChat}
-						/>
+					<motion.div
+						className="people-grid"
+						variants={staggerContainer}
+						initial="hidden"
+						animate="visible"
+					>
+						{filtered.map((person) => (
+							<motion.button
+								key={person.id}
+								className="people-tile"
+								onClick={() => openChat(person)}
+								disabled={openingUserId !== null}
+								variants={staggerItem}
+							>
+								<span className="people-tile-top">
+									<Avatar
+										initials={initialsOf(person.displayName)}
+										color={person.online ? "green" : "blue"}
+										online={person.online}
+										src={person.avatarUrl}
+										size="lg"
+									/>
+									<span className="people-tile-cta" aria-hidden="true">
+										<MessageCircle />
+									</span>
+								</span>
+								<strong>{person.displayName}</strong>
+								<span className="people-status">
+									<span className={`people-status-dot ${person.online ? "online" : "offline"}`} />
+									<small>
+										{person.online
+											? "Active now"
+											: formatLastSeen(person.lastSeenAt)}
+									</small>
+								</span>
+							</motion.button>
+						))}
+						{filtered.length === 0 && (
+							<motion.p className="people-empty" variants={fadeInUp}>
+								<span className="people-empty-icon">
+									<UsersRound aria-hidden="true" />
+								</span>
+								{query.trim()
+									? `No one matches “${query.trim()}”.`
+									: `No ${filter === "all" ? "" : filter} people to show.`}
+							</motion.p>
+						)}
 					</motion.div>
 				)}
 			</div>
 		</AppShell>
-	);
-}
-
-function PeopleSection({
-	title,
-	count,
-	people,
-	openingUserId,
-	onOpenChat,
-}: {
-	title: "Online" | "Offline";
-	count: number;
-	people: PresenceUser[];
-	openingUserId: string | null;
-	onOpenChat: (person: PresenceUser) => void;
-}) {
-	return (
-		<motion.section className="card people-section" variants={fadeInUp}>
-			<header>
-				<div>
-					<h2>{title}</h2>
-					<p>
-						{title === "Online"
-							? "Available in the workspace now"
-							: "Not currently connected"}
-					</p>
-				</div>
-				<span>{count}</span>
-			</header>
-			<motion.div className="people-list" variants={staggerContainer} initial="hidden" animate="visible">
-				{people.map((person) => (
-					<motion.button
-						key={person.id}
-						onClick={() => onOpenChat(person)}
-						disabled={openingUserId !== null}
-						variants={staggerItem}
-					>
-						<Avatar
-							initials={initialsOf(person.displayName)}
-							color={person.online ? "green" : "blue"}
-							online={person.online}
-							src={person.avatarUrl}
-						/>
-						<span>
-							<strong>{person.displayName}</strong>
-							<small>
-								{person.online && person.onlineSince
-									? formatOnlineDuration(person.onlineSince)
-									: formatLastSeen(person.lastSeenAt)}
-							</small>
-						</span>
-						<MessageCircle size={17} />
-					</motion.button>
-				))}
-				{people.length === 0 && (
-					<p className="people-empty">
-						<UsersRound aria-hidden="true" />
-						No {title.toLocaleLowerCase()} people.
-					</p>
-				)}
-			</motion.div>
-		</motion.section>
 	);
 }
