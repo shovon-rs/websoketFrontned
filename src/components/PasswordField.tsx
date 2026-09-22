@@ -9,6 +9,9 @@ type PasswordFieldProps = {
 	minLength?: number;
 	required?: boolean;
 	autoComplete?: "current-password" | "new-password";
+	/** Optional — lets a caller (e.g. a password-strength meter) observe the live value without
+	 * turning this into a controlled input. */
+	onChange?: (value: string) => void;
 };
 
 export function PasswordField({
@@ -17,6 +20,7 @@ export function PasswordField({
 	minLength,
 	required,
 	autoComplete,
+	onChange,
 }: PasswordFieldProps) {
 	const [visible, setVisible] = useState(false);
 	const label = visible ? "Hide password" : "Show password";
@@ -30,6 +34,7 @@ export function PasswordField({
 				minLength={minLength}
 				required={required}
 				autoComplete={autoComplete}
+				onChange={onChange ? (e) => onChange(e.target.value) : undefined}
 			/>
 			<button
 				type="button"

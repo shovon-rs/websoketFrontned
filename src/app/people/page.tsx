@@ -1,15 +1,18 @@
 "use client";
 
 import { AppShell } from "@/components/AppShell";
+import { AuthErrorMessage } from "@/components/AuthErrorMessage";
 import { Avatar } from "@/components/Avatar";
 import { ListShimmer } from "@/components/Shimmer";
 import { ApiError } from "@/lib/api-client";
 import * as chatApi from "@/lib/api/chat.api";
 import * as usersApi from "@/lib/api/users.api";
+import { fadeInUp, staggerContainer, staggerItem } from "@/lib/motion";
 import { formatLastSeen, formatOnlineDuration } from "@/lib/time";
 import type { PresenceUser } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
-import { MessageCircle } from "lucide-react";
+import { motion } from "framer-motion";
+import { MessageCircle, UsersRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -81,11 +84,7 @@ export default function PeoplePage() {
 			subtitle="See who is available and start a conversation."
 		>
 			<div className="page narrow people-page">
-				{error && (
-					<p className="auth-error" role="alert">
-						{error}
-					</p>
-				)}
+				<AuthErrorMessage message={error} />
 				{loading ? (
 					<>
 						<section className="card people-section">
@@ -96,7 +95,7 @@ export default function PeoplePage() {
 						</section>
 					</>
 				) : (
-					<>
+					<motion.div variants={staggerContainer} initial="hidden" animate="visible">
 						<PeopleSection
 							title="Online"
 							count={online.length}
@@ -111,7 +110,7 @@ export default function PeoplePage() {
 							openingUserId={openingUserId}
 							onOpenChat={openChat}
 						/>
-					</>
+					</motion.div>
 				)}
 			</div>
 		</AppShell>
@@ -132,7 +131,7 @@ function PeopleSection({
 	onOpenChat: (person: PresenceUser) => void;
 }) {
 	return (
-		<section className="card people-section">
+		<motion.section className="card people-section" variants={fadeInUp}>
 			<header>
 				<div>
 					<h2>{title}</h2>
@@ -144,12 +143,13 @@ function PeopleSection({
 				</div>
 				<span>{count}</span>
 			</header>
-			<div className="people-list">
+			<motion.div className="people-list" variants={staggerContainer} initial="hidden" animate="visible">
 				{people.map((person) => (
-					<button
+					<motion.button
 						key={person.id}
 						onClick={() => onOpenChat(person)}
 						disabled={openingUserId !== null}
+						variants={staggerItem}
 					>
 						<Avatar
 							initials={initialsOf(person.displayName)}
@@ -166,12 +166,15 @@ function PeopleSection({
 							</small>
 						</span>
 						<MessageCircle size={17} />
-					</button>
+					</motion.button>
 				))}
 				{people.length === 0 && (
-					<p className="people-empty">No {title.toLocaleLowerCase()} people.</p>
+					<p className="people-empty">
+						<UsersRound aria-hidden="true" />
+						No {title.toLocaleLowerCase()} people.
+					</p>
 				)}
-			</div>
-		</section>
+			</motion.div>
+		</motion.section>
 	);
 }

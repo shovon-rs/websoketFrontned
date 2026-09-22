@@ -5,9 +5,12 @@ import { Chart } from "@/components/Chart";
 import { Shimmer } from "@/components/Shimmer";
 import * as dashboardApi from "@/lib/api/dashboard.api";
 import { useAuth } from "@/lib/auth-context";
+import { fadeInUp, hoverLift, staggerContainer, staggerItem, tapScale } from "@/lib/motion";
 import { isSuperAdmin } from "@/lib/roles";
 import type { DashboardMetrics } from "@/lib/types";
+import { useCountUp } from "@/lib/use-count-up";
 import { useWs } from "@/lib/ws-context";
+import { motion } from "framer-motion";
 import {
 	ArrowUpRight,
 	FileText,
@@ -20,6 +23,17 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
+function AnimatedMetric({ value }: { value: number | null }) {
+	const display = useCountUp(value);
+	if (display === null) return <Shimmer className="shimmer-metric" />;
+	return <strong>{display}</strong>;
+}
+
+// Motion-wrapped Next Link so entrance/hover variants can live directly on the anchor —
+// keeps it a direct child of .metric-grid / .quick-actions-grid so existing `>`-combinator
+// CSS (a.metric:hover, .quick-actions-grid > a, etc) keeps matching unchanged.
+const MotionLink = motion.create(Link);
 
 export default function Dashboard() {
 	const { status: authStatus, user } = useAuth();
@@ -71,7 +85,7 @@ export default function Dashboard() {
 			subtitle="Here’s what’s happening across your workspace."
 		>
 			<div className="page dashboard-page">
-				<div className="welcome">
+				<motion.div className="welcome" variants={fadeInUp} initial="hidden" animate="visible">
 					<div>
 						<span className="eyebrow">
 							{new Date().toLocaleDateString(undefined, {
@@ -85,56 +99,53 @@ export default function Dashboard() {
 							Live workspace activity updates automatically — no refresh needed.
 						</p>
 					</div>
-					<Link href="/chat" className="primary">
-						<Plus size={18} /> Start a conversation
-					</Link>
-				</div>
-				<section className="metric-grid">
-					<Link href="/chat" className="metric">
+					<motion.div whileTap={tapScale}>
+						<Link href="/chat" className="primary">
+							<Plus size={18} /> Start a conversation
+						</Link>
+					</motion.div>
+				</motion.div>
+				<motion.section
+					className="metric-grid"
+					variants={staggerContainer}
+					initial="hidden"
+					animate="visible"
+				>
+					<MotionLink href="/chat" className="metric" variants={staggerItem} whileHover={hoverLift}>
 						<span className="metric-icon coral">
 							<MessageCircle />
 						</span>
 						<div>
 							<small>Your conversations</small>
-							{conversationCount === null ? (
-								<Shimmer className="shimmer-metric" />
-							) : (
-								<strong>{conversationCount}</strong>
-							)}
+							<AnimatedMetric value={conversationCount} />
 							<em>See Messages</em>
 						</div>
-					</Link>
-					<Link href="/people" className="metric">
+					</MotionLink>
+					<MotionLink href="/people" className="metric" variants={staggerItem} whileHover={hoverLift}>
 						<span className="metric-icon blue">
 							<Users />
 						</span>
 						<div>
 							<small>Online now</small>
-							{metrics === null ? (
-								<Shimmer className="shimmer-metric" />
-							) : (
-								<strong>{metrics.onlineUsers}</strong>
-							)}
+							<AnimatedMetric value={metrics?.onlineUsers ?? null} />
 							<em>See who's online</em>
 						</div>
-					</Link>
-					<Link href="/calls" className="metric">
+					</MotionLink>
+					<MotionLink href="/calls" className="metric" variants={staggerItem} whileHover={hoverLift}>
 						<span className="metric-icon violet">
 							<Phone />
 						</span>
 						<div>
 							<small>Calls this week</small>
-							{callsThisWeek === null ? (
-								<Shimmer className="shimmer-metric" />
-							) : (
-								<strong>{callsThisWeek}</strong>
-							)}
+							<AnimatedMetric value={callsThisWeek} />
 							<em>See call history</em>
 						</div>
-					</Link>
-					<Link
+					</MotionLink>
+					<MotionLink
 						href={isSuperAdmin(user?.role) ? "/admin?tab=live-locations" : "/tracking"}
 						className="metric"
+						variants={staggerItem}
+						whileHover={hoverLift}
 					>
 						<span className="metric-icon green">
 							<Radio />
@@ -153,10 +164,15 @@ export default function Dashboard() {
 								{isSuperAdmin(user?.role) ? "See live locations" : "Share your location"}
 							</em>
 						</div>
-					</Link>
-				</section>
+					</MotionLink>
+				</motion.section>
 				<div className="dashboard-grid">
-					<section className="card activity-chart">
+					<motion.section
+						className="card activity-chart"
+						variants={fadeInUp}
+						initial="hidden"
+						animate="visible"
+					>
 						<div className="card-head">
 							<div>
 								<h3>Message activity</h3>
@@ -175,8 +191,14 @@ export default function Dashboard() {
 						) : (
 							<Shimmer className="shimmer-chart" />
 						)}
-					</section>
-					<section className="card live-now">
+					</motion.section>
+					<motion.section
+						className="card live-now"
+						variants={fadeInUp}
+						initial="hidden"
+						animate="visible"
+						transition={{ delay: 0.06 }}
+					>
 						<div className="card-head">
 							<div>
 								<h3>Live now</h3>
@@ -202,17 +224,28 @@ export default function Dashboard() {
 						<Link className="text-link" href="/people">
 							See who's online <ArrowUpRight size={16} />
 						</Link>
-					</section>
+					</motion.section>
 				</div>
-				<section className="card quick-actions">
+				<motion.section
+					className="card quick-actions"
+					variants={fadeInUp}
+					initial="hidden"
+					animate="visible"
+					transition={{ delay: 0.1 }}
+				>
 					<div className="card-head">
 						<div>
 							<h3>Quick actions</h3>
 							<p>Start something or jump back into your work</p>
 						</div>
 					</div>
-					<div className="quick-actions-grid">
-						<Link href="/chat">
+					<motion.div
+						className="quick-actions-grid"
+						variants={staggerContainer}
+						initial="hidden"
+						animate="visible"
+					>
+						<MotionLink href="/chat" variants={staggerItem} whileHover={hoverLift} whileTap={tapScale}>
 							<span className="quick-action-icon coral">
 								<MessageCircle />
 							</span>
@@ -221,8 +254,8 @@ export default function Dashboard() {
 								<small>Open your conversations</small>
 							</span>
 							<ArrowUpRight />
-						</Link>
-						<Link href="/call/team-sync">
+						</MotionLink>
+						<MotionLink href="/call/team-sync" variants={staggerItem} whileHover={hoverLift} whileTap={tapScale}>
 							<span className="quick-action-icon violet">
 								<Phone />
 							</span>
@@ -231,8 +264,8 @@ export default function Dashboard() {
 								<small>Connect by audio or video</small>
 							</span>
 							<ArrowUpRight />
-						</Link>
-						<Link href="/collab/new">
+						</MotionLink>
+						<MotionLink href="/collab/new" variants={staggerItem} whileHover={hoverLift} whileTap={tapScale}>
 							<span className="quick-action-icon blue">
 								<FileText />
 							</span>
@@ -241,8 +274,8 @@ export default function Dashboard() {
 								<small>Collaborate in real time</small>
 							</span>
 							<ArrowUpRight />
-						</Link>
-						<Link href="/tracking">
+						</MotionLink>
+						<MotionLink href="/tracking" variants={staggerItem} whileHover={hoverLift} whileTap={tapScale}>
 							<span className="quick-action-icon green">
 								<MapPin />
 							</span>
@@ -251,9 +284,9 @@ export default function Dashboard() {
 								<small>Start secure live tracking</small>
 							</span>
 							<ArrowUpRight />
-						</Link>
-					</div>
-				</section>
+						</MotionLink>
+					</motion.div>
+				</motion.section>
 			</div>
 		</AppShell>
 	);

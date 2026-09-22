@@ -1,12 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { UserSearchDropdown } from "@/components/UserSearchDropdown";
 import { ListShimmer } from "@/components/Shimmer";
 import { ApiError } from "@/lib/api-client";
 import * as chatApi from "@/lib/api/chat.api";
+import { fadeInUp } from "@/lib/motion";
 import type { User } from "@/lib/types";
+import { MessageCircleMore } from "lucide-react";
 import { CreateGroupDialog } from "./CreateGroupDialog";
 
 export default function Chat() {
@@ -42,20 +45,25 @@ export default function Chat() {
 
   if (!empty) return <AppShell title="Messages"><div className="page narrow"><section className="card"><ListShimmer rows={5}/></section></div></AppShell>;
 
-  return <AppShell title="Messages"><div className="page narrow"><section className="card">
-    <h3>No conversations yet</h3>
-    <p className="quiet">Search for a teammate to start your first conversation, or create a group.</p>
+  return <AppShell title="Messages"><div className="page narrow"><motion.section className="card" variants={fadeInUp} initial="hidden" animate="visible">
+    <div className="empty-state">
+      <MessageCircleMore size={26} />
+      <h3 style={{ margin: 0 }}>No conversations yet</h3>
+      <p className="quiet">Search for a teammate to start your first conversation, or create a group.</p>
+    </div>
     <div style={{ margin: "16px 0" }}>
       <UserSearchDropdown onSelect={startConversation} placeholder="Search people by name or email…" autoFocus disabled={creating} />
     </div>
     <button className="plain" onClick={() => setGroupDialogOpen(true)}>Create a group instead</button>
     {error && <p className="auth-error">{error}</p>}
-  </section></div>
-  {groupDialogOpen && (
-    <CreateGroupDialog
-      onClose={() => setGroupDialogOpen(false)}
-      onCreated={(conversation) => router.push(`/chat/${conversation.id}`)}
-    />
-  )}
+  </motion.section></div>
+  <AnimatePresence>
+    {groupDialogOpen && (
+      <CreateGroupDialog
+        onClose={() => setGroupDialogOpen(false)}
+        onCreated={(conversation) => router.push(`/chat/${conversation.id}`)}
+      />
+    )}
+  </AnimatePresence>
   </AppShell>;
 }

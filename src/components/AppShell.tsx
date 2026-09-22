@@ -4,6 +4,8 @@ import { useAuth } from "@/lib/auth-context";
 import { hasRole } from "@/lib/roles";
 import type { AppNotification, Role } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
+import { dialogBackdrop, dialogPanel, pageTransition } from "@/lib/motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	Bell,
 	CalendarDays,
@@ -396,20 +398,39 @@ export function AppShell({
 						</Link>
 					</div>
 				</header>
-				{children}
+				<AnimatePresence mode="wait" initial={false}>
+					<motion.div
+						key={path}
+						variants={pageTransition}
+						initial="initial"
+						animate="animate"
+						exit="exit"
+					>
+						{children}
+					</motion.div>
+				</AnimatePresence>
 			</main>
+			<AnimatePresence>
 			{searchOpen && (
-				<div
+				<motion.div
 					className="global-search-backdrop"
+					variants={dialogBackdrop}
+					initial="hidden"
+					animate="visible"
+					exit="exit"
 					onMouseDown={(event) => {
 						if (event.target === event.currentTarget) setSearchOpen(false);
 					}}
 				>
-					<section
+					<motion.section
 						className="global-search"
 						role="dialog"
 						aria-modal="true"
 						aria-label="Search workspace"
+						variants={dialogPanel}
+						initial="hidden"
+						animate="visible"
+						exit="exit"
 					>
 						<div className="global-search-input">
 							<Search size={19} />
@@ -482,21 +503,31 @@ export function AppShell({
 							<span>Enter Open</span>
 							<span>Esc Close</span>
 						</footer>
-					</section>
-				</div>
+					</motion.section>
+				</motion.div>
 			)}
+			</AnimatePresence>
+			<AnimatePresence>
 			{inviteOpen && (
-				<div
+				<motion.div
 					className="share-backdrop"
+					variants={dialogBackdrop}
+					initial="hidden"
+					animate="visible"
+					exit="exit"
 					onMouseDown={(event) => {
 						if (event.target === event.currentTarget) setInviteOpen(false);
 					}}
 				>
-					<section
+					<motion.section
 						className="share-dialog"
 						role="dialog"
 						aria-modal="true"
 						aria-labelledby="invite-title"
+						variants={dialogPanel}
+						initial="hidden"
+						animate="visible"
+						exit="exit"
 					>
 						<header>
 							<div>
@@ -535,9 +566,10 @@ export function AppShell({
 									<Share2 size={16} /> Share via another app
 								</button>
 							)}
-					</section>
-				</div>
+					</motion.section>
+				</motion.div>
 			)}
+			</AnimatePresence>
 		</div>
 	);
 }

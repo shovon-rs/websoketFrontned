@@ -1,11 +1,14 @@
 "use client";
 import { Avatar } from "@/components/Avatar";
 import { PasswordField } from "@/components/PasswordField";
+import { ListShimmer } from "@/components/Shimmer";
 import { ApiError } from "@/lib/api-client";
 import * as usersApi from "@/lib/api/users.api";
+import { dialogBackdrop, dialogPanel, staggerContainer, staggerItem } from "@/lib/motion";
 import { strongPasswordError } from "@/lib/password";
 import { isSuperAdmin } from "@/lib/roles";
 import type { Role, User } from "@/lib/types";
+import { AnimatePresence, motion } from "framer-motion";
 import { UserPlus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -27,6 +30,7 @@ export function AdminUsersTab({ actingRole, currentUserId }: { actingRole: Role;
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
 
   function loadUsers() {
     usersApi.listUsersForAdmin().then(setUsers).catch((err) => {
@@ -50,13 +54,12 @@ export function AdminUsersTab({ actingRole, currentUserId }: { actingRole: Role;
   }
 
   async function onDelete(target: User) {
-    if (!window.confirm(`Delete ${target.displayName}? They will no longer be able to sign in.`)) return;
-
     setError(null);
     setPendingId(target.id);
     try {
       await usersApi.deleteUser(target.id);
       setUsers((prev) => prev?.filter((u) => u.id !== target.id) ?? prev);
+      setDeleteTarget(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not delete that user.");
     } finally {
@@ -64,7 +67,7 @@ export function AdminUsersTab({ actingRole, currentUserId }: { actingRole: Role;
     }
   }
 
-  if (!users) return <section className="card"><p className="quiet">Loading users…</p></section>;
+  if (!users) return <section className="card"><ListShimmer rows={6} /></section>;
 
   return (
     <section className="card">
@@ -75,60 +78,108 @@ export function AdminUsersTab({ actingRole, currentUserId }: { actingRole: Role;
         </button>
       </div>
       {error && <p className="auth-error" role="alert">{error}</p>}
-      {users.map((u) => {
-        const isSelf = u.id === currentUserId;
-        const targetIsSuperAdmin = u.role === "super_admin";
-        // An admin (not super_admin) may never act on an existing super_admin row at all.
-        const roleActionsDisabled = isSelf || pendingId === u.id || (targetIsSuperAdmin && actingRole !== "super_admin");
-        // Deleting is reserved for super_admin, and a super_admin may never delete another super_admin.
-        const canDelete = isSuperAdmin(actingRole) && !isSelf && !targetIsSuperAdmin;
+      <motion.div variants={staggerContainer} initial="hidden" animate="visible">
+        {users.map((u) => {
+          const isSelf = u.id === currentUserId;
+          const targetIsSuperAdmin = u.role === "super_admin";
+          // An admin (not super_admin) may never act on an existing super_admin row at all.
+          const roleActionsDisabled = isSelf || pendingId === u.id || (targetIsSuperAdmin && actingRole !== "super_admin");
+          // Deleting is reserved for super_admin, and a super_admin may never delete another super_admin.
+          const canDelete = isSuperAdmin(actingRole) && !isSelf && !targetIsSuperAdmin;
 
-        return (
-          <div className="activity-row" key={u.id}>
-            <Avatar initials={initialsOf(u.displayName)} color="blue" size="sm" src={u.avatarUrl} />
-            <div>
-              <strong>{u.displayName}{isSelf ? " (you)" : ""}</strong>
-              <small>{u.email}</small>
-            </div>
-            <select
-              className="role-select"
-              value={u.role ?? "user"}
-              disabled={roleActionsDisabled}
-              onChange={(e) => onRoleChange(u, e.target.value as Role)}
-            >
-              {/* Granting super_admin is reserved for an existing super_admin — the option is
-                  still listed (so a super_admin row always has a matching <option>) but
-                  disabled as a *new* choice for a plain admin actor. */}
-              {ALL_ROLE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value} disabled={o.value === "super_admin" && actingRole !== "super_admin"}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            {canDelete && (
-              <button
-                className="danger small"
-                disabled={pendingId === u.id}
-                onClick={() => onDelete(u)}
-                title={`Delete ${u.displayName}`}
+          return (
+            <motion.div className="activity-row row-hover" key={u.id} variants={staggerItem} layout>
+              <Avatar initials={initialsOf(u.displayName)} color="blue" size="sm" src={u.avatarUrl} />
+              <div>
+                <strong>{u.displayName}{isSelf ? " (you)" : ""}</strong>
+                <small>{u.email}</small>
+              </div>
+              <select
+                className="role-select"
+                value={u.role ?? "user"}
+                disabled={roleActionsDisabled}
+                onChange={(e) => onRoleChange(u, e.target.value as Role)}
               >
-                Delete
-              </button>
-            )}
-          </div>
-        );
-      })}
+                {/* Granting super_admin is reserved for an existing super_admin — the option is
+                    still listed (so a super_admin row always has a matching <option>) but
+                    disabled as a *new* choice for a plain admin actor. */}
+                {ALL_ROLE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value} disabled={o.value === "super_admin" && actingRole !== "super_admin"}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              {canDelete && (
+                <button
+                  className="danger small"
+                  disabled={pendingId === u.id}
+                  onClick={() => setDeleteTarget(u)}
+                  title={`Delete ${u.displayName}`}
+                >
+                  Delete
+                </button>
+              )}
+            </motion.div>
+          );
+        })}
+      </motion.div>
 
-      {createOpen && (
-        <CreateUserDialog
-          actingRole={actingRole}
-          onClose={() => setCreateOpen(false)}
-          onCreated={(created) => {
-            setUsers((prev) => (prev ? [...prev, created] : prev));
-            setCreateOpen(false);
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {createOpen && (
+          <CreateUserDialog
+            actingRole={actingRole}
+            onClose={() => setCreateOpen(false)}
+            onCreated={(created) => {
+              setUsers((prev) => (prev ? [...prev, created] : prev));
+              setCreateOpen(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            className="share-backdrop"
+            variants={dialogBackdrop}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget && pendingId !== deleteTarget.id) setDeleteTarget(null);
+            }}
+          >
+            <motion.section
+              className="share-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-user-title"
+              variants={dialogPanel}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <header>
+                <div>
+                  <h2 id="delete-user-title">Delete user?</h2>
+                  <p>&ldquo;{deleteTarget.displayName}&rdquo; will no longer be able to sign in. This cannot be undone.</p>
+                </div>
+                <button onClick={() => setDeleteTarget(null)} aria-label="Close delete confirmation" disabled={pendingId === deleteTarget.id}>
+                  <X size={18} />
+                </button>
+              </header>
+              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                <button className="plain wide" onClick={() => setDeleteTarget(null)} disabled={pendingId === deleteTarget.id}>
+                  Cancel
+                </button>
+                <button className="danger wide" onClick={() => onDelete(deleteTarget)} disabled={pendingId === deleteTarget.id}>
+                  {pendingId === deleteTarget.id ? "Deleting…" : "Delete"}
+                </button>
+              </div>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -177,13 +228,26 @@ function CreateUserDialog({
   }
 
   return (
-    <div
+    <motion.div
       className="share-backdrop"
+      variants={dialogBackdrop}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
+      <motion.section
+        className="share-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-user-title"
+        variants={dialogPanel}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <header>
           <div>
             <h2 id="create-user-title">Create user</h2>
@@ -219,7 +283,7 @@ function CreateUserDialog({
             {submitting ? "Creating…" : "Create user"}
           </button>
         </form>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }

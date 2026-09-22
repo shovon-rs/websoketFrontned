@@ -3,10 +3,14 @@ import { AppShell } from "@/components/AppShell";
 import { PageShimmer } from "@/components/Shimmer";
 import { ApiError } from "@/lib/api-client";
 import * as projectsApi from "@/lib/api/projects.api";
+import { dialogBackdrop, dialogPanel, staggerContainer, staggerItem, tapScale } from "@/lib/motion";
 import type { Project, ProjectSummary } from "@/lib/types";
+import { AnimatePresence, motion } from "framer-motion";
 import { ClipboardList, FolderKanban, Plus, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
+const MotionLink = motion(Link);
 
 const COLOR_PRESETS = ["#ff6f4f", "#2f7d5a", "#3a6fd8", "#a75fd1", "#d4a017", "#d94f42", "#17231e"];
 
@@ -43,13 +47,23 @@ export default function ProjectsPage() {
         {!projects && !error && <PageShimmer />}
         {projects && projects.length === 0 && (
           <section className="card">
-            <p className="quiet">No projects yet. Create one to start organizing tasks into a board.</p>
+            <div className="empty-state">
+              <FolderKanban size={26} />
+              <h3 style={{ margin: 0 }}>No projects yet.</h3>
+              <p className="quiet">Create one to start organizing tasks into a board.</p>
+            </div>
           </section>
         )}
         {projects && projects.length > 0 && (
-          <div className="project-grid">
+          <motion.div className="project-grid" variants={staggerContainer} initial="hidden" animate="visible">
             {projects.map((project) => (
-              <Link href={`/projects/${project.id}`} className="project-card" key={project.id}>
+              <MotionLink
+                href={`/projects/${project.id}`}
+                className="project-card"
+                key={project.id}
+                variants={staggerItem}
+                whileTap={tapScale}
+              >
                 <div className="project-card-head">
                   <span className="color-dot" style={{ background: project.color || "#ff6f4f" }} />
                   <strong>{project.name}</strong>
@@ -66,37 +80,39 @@ export default function ProjectsPage() {
                     <Users size={13} /> {project.memberCount} member{project.memberCount === 1 ? "" : "s"}
                   </span>
                 </div>
-              </Link>
+              </MotionLink>
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
 
-      {createOpen && (
-        <CreateProjectDialog
-          onClose={() => setCreateOpen(false)}
-          onCreated={(project) => {
-            setProjects((prev) =>
-              prev
-                ? [
-                    {
-                      id: project.id,
-                      name: project.name,
-                      description: project.description,
-                      color: project.color,
-                      memberCount: project.members.length,
-                      sectionCount: project.sections.length,
-                      taskCount: project.taskCount ?? 0,
-                      createdAt: project.createdAt,
-                    },
-                    ...prev,
-                  ]
-                : prev,
-            );
-            setCreateOpen(false);
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {createOpen && (
+          <CreateProjectDialog
+            onClose={() => setCreateOpen(false)}
+            onCreated={(project) => {
+              setProjects((prev) =>
+                prev
+                  ? [
+                      {
+                        id: project.id,
+                        name: project.name,
+                        description: project.description,
+                        color: project.color,
+                        memberCount: project.members.length,
+                        sectionCount: project.sections.length,
+                        taskCount: project.taskCount ?? 0,
+                        createdAt: project.createdAt,
+                      },
+                      ...prev,
+                    ]
+                  : prev,
+              );
+              setCreateOpen(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </AppShell>
   );
 }
@@ -131,8 +147,24 @@ function CreateProjectDialog({ onClose, onCreated }: { onClose: () => void; onCr
   }
 
   return (
-    <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="create-project-title">
+    <motion.div
+      className="share-backdrop"
+      variants={dialogBackdrop}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+      <motion.section
+        className="share-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-project-title"
+        variants={dialogPanel}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <header>
           <div>
             <h2 id="create-project-title">New project</h2>
@@ -155,7 +187,7 @@ function CreateProjectDialog({ onClose, onCreated }: { onClose: () => void; onCr
             Color
             <div className="color-swatch-row">
               {COLOR_PRESETS.map((preset) => (
-                <button
+                <motion.button
                   type="button"
                   key={preset}
                   className={`color-swatch${color === preset ? " selected" : ""}`}
@@ -163,6 +195,9 @@ function CreateProjectDialog({ onClose, onCreated }: { onClose: () => void; onCr
                   aria-label={`Use color ${preset}`}
                   aria-pressed={color === preset}
                   onClick={() => setColor(preset)}
+                  whileTap={tapScale}
+                  animate={{ scale: color === preset ? 1.08 : 1 }}
+                  transition={{ duration: 0.16 }}
                 />
               ))}
             </div>
@@ -176,7 +211,7 @@ function CreateProjectDialog({ onClose, onCreated }: { onClose: () => void; onCr
             {submitting ? "Creating…" : "Create project"}
           </button>
         </form>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }

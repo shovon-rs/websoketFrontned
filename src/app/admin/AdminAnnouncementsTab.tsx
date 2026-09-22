@@ -1,8 +1,11 @@
 "use client";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
+import { ListShimmer } from "@/components/Shimmer";
 import { ApiError } from "@/lib/api-client";
 import * as announcementsApi from "@/lib/api/announcements.api";
+import { fadeInUp, staggerContainer, staggerItem, tapScale } from "@/lib/motion";
 import type { Announcement, AnnouncementAudience, AnnouncementStatus, User } from "@/lib/types";
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 const STATUS_LABEL: Record<AnnouncementStatus, string> = {
@@ -70,7 +73,7 @@ export function AdminAnnouncementsTab() {
 
   return (
     <>
-      <section className="card" style={{ marginBottom: 20 }}>
+      <motion.section className="card" style={{ marginBottom: 20 }} variants={fadeInUp} initial="hidden" animate="visible">
         <div className="card-head"><div><h3>New announcement</h3><p>Sent immediately as a notification.</p></div></div>
         <form className="settings-form" onSubmit={onSubmit}>
           <label>
@@ -106,25 +109,27 @@ export function AdminAnnouncementsTab() {
             </button>
           </div>
         </form>
-      </section>
+      </motion.section>
 
-      <section className="card">
+      <motion.section className="card" variants={fadeInUp} initial="hidden" animate="visible" transition={{ delay: 0.08 }}>
         <div className="card-head"><div><h3>All announcements</h3><p>Most recent first</p></div></div>
         {listError && <p className="auth-error" role="alert">{listError}</p>}
-        {announcements === null && <p className="quiet">Loading…</p>}
+        {announcements === null && <ListShimmer rows={3} />}
         {announcements?.length === 0 && <p className="quiet">No announcements yet.</p>}
-        {announcements?.map((a) => (
-          <div className="activity-row" key={a.id}>
-            <div>
-              <strong>{a.title}</strong>
-              <small>{STATUS_LABEL[a.status]} · {a.audience === "everyone" ? "Everyone" : `${a.invitedUsers?.length ?? 0} invited`}</small>
-            </div>
-            {(a.status === "scheduled" || a.status === "live") && (
-              <button className="plain" onClick={() => onCancel(a.id)}>Cancel</button>
-            )}
-          </div>
-        ))}
-      </section>
+        <motion.div variants={staggerContainer} initial="hidden" animate="visible">
+          {announcements?.map((a) => (
+            <motion.div className="activity-row row-hover" key={a.id} variants={staggerItem} layout>
+              <div>
+                <strong>{a.title}</strong>
+                <small>{STATUS_LABEL[a.status]} · {a.audience === "everyone" ? "Everyone" : `${a.invitedUsers?.length ?? 0} invited`}</small>
+              </div>
+              {(a.status === "scheduled" || a.status === "live") && (
+                <motion.button className="plain" whileTap={tapScale} onClick={() => onCancel(a.id)}>Cancel</motion.button>
+              )}
+            </motion.div>
+          ))}
+        </motion.div>
+      </motion.section>
     </>
   );
 }

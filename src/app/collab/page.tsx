@@ -4,11 +4,15 @@ import { PageShimmer } from "@/components/Shimmer";
 import { ApiError } from "@/lib/api-client";
 import * as documentsApi from "@/lib/api/documents.api";
 import { useAuth } from "@/lib/auth-context";
+import { EASE_OUT, dialogBackdrop, dialogPanel, staggerContainer, staggerItem, tapScale } from "@/lib/motion";
 import type { DocumentSummary } from "@/lib/types";
+import { AnimatePresence, motion } from "framer-motion";
 import { FileText, Globe2, PenSquare, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+
+const MotionLink = motion(Link);
 
 const ROLE_LABEL: Record<DocumentSummary["role"], string> = {
   owner: "Owner",
@@ -29,7 +33,14 @@ function formatUpdatedAt(iso: string): string {
 
 function DocumentRow({ doc }: { doc: DocumentSummary }) {
   return (
-    <Link href={`/collab/${doc.id}`} className="project-card" key={doc.id} title={new Date(doc.updatedAt).toLocaleString()}>
+    <MotionLink
+      href={`/collab/${doc.id}`}
+      className="project-card"
+      key={doc.id}
+      title={new Date(doc.updatedAt).toLocaleString()}
+      variants={staggerItem}
+      whileTap={tapScale}
+    >
       <div className="project-card-head">
         <FileText size={16} />
         <strong>{doc.title || "Untitled document"}</strong>
@@ -45,21 +56,26 @@ function DocumentRow({ doc }: { doc: DocumentSummary }) {
         )}
         <span className="quiet">{formatUpdatedAt(doc.updatedAt)}</span>
       </div>
-    </Link>
+    </MotionLink>
   );
 }
 
-function DocumentSection({ title, docs }: { title: string; docs: DocumentSummary[] }) {
+function DocumentSection({ title, docs, index }: { title: string; docs: DocumentSummary[]; index: number }) {
   if (docs.length === 0) return null;
   return (
-    <section style={{ marginTop: 22 }}>
+    <motion.section
+      style={{ marginTop: 22 }}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.42, ease: EASE_OUT, delay: index * 0.12 }}
+    >
       <h3 style={{ margin: "0 0 10px" }}>{title}</h3>
-      <div className="project-grid">
+      <motion.div className="project-grid" variants={staggerContainer} initial="hidden" animate="visible">
         {docs.map((doc) => (
           <DocumentRow doc={doc} key={doc.id} />
         ))}
-      </div>
-    </section>
+      </motion.div>
+    </motion.section>
   );
 }
 
@@ -112,7 +128,13 @@ export default function CollabListPage() {
           </p>
         )}
 
-        <section className="card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+        <motion.section
+          className="card doc-cta-card"
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.36, ease: EASE_OUT }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <span
               style={{
@@ -136,58 +158,81 @@ export default function CollabListPage() {
               </p>
             </div>
           </div>
-          <button className="primary" onClick={() => setCreateOpen(true)}>
+          <motion.button className="primary doc-cta-btn" onClick={() => setCreateOpen(true)} whileTap={tapScale} whileHover={{ scale: 1.03 }}>
             <Plus size={16} /> New document
-          </button>
-        </section>
+          </motion.button>
+        </motion.section>
 
-        {!documents && !error && <PageShimmer />}
+        {!documents && !error && <PageShimmer variant="cards" />}
 
         {documents && documents.length === 0 && (
           <section className="card" style={{ marginTop: 22 }}>
-            <p className="quiet">No documents yet. Create one to start writing with your team.</p>
+            <div className="empty-state">
+              <FileText size={26} />
+              <p className="quiet">No documents yet. Create one to start writing with your team.</p>
+            </div>
           </section>
         )}
 
         {documents && documents.length > 0 && (
           <>
-            <DocumentSection title="Your documents" docs={owned} />
-            <DocumentSection title="Shared with you" docs={shared} />
-            <DocumentSection title="Public documents" docs={discoverable} />
+            <DocumentSection title="Your documents" docs={owned} index={0} />
+            <DocumentSection title="Shared with you" docs={shared} index={1} />
+            <DocumentSection title="Public documents" docs={discoverable} index={2} />
           </>
         )}
       </div>
 
-      {createOpen && (
-        <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setCreateOpen(false); }}>
-          <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="create-document-title">
-            <header>
-              <div>
-                <h2 id="create-document-title">New document</h2>
-                <p>Give it a title to get started — you can rename it later.</p>
-              </div>
-              <button onClick={() => setCreateOpen(false)} aria-label="Close create document dialog">
-                <X size={18} />
-              </button>
-            </header>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = new FormData(e.currentTarget);
-                onCreate(String(form.get("title") ?? "").trim());
-              }}
+      <AnimatePresence>
+        {createOpen && (
+          <motion.div
+            className="share-backdrop"
+            variants={dialogBackdrop}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setCreateOpen(false);
+            }}
+          >
+            <motion.section
+              className="share-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="create-document-title"
+              variants={dialogPanel}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
             >
-              <label>
-                Title
-                <input name="title" placeholder="Untitled document" maxLength={200} autoFocus />
-              </label>
-              <button className="primary wide" disabled={creating}>
-                {creating ? "Creating…" : "Create document"}
-              </button>
-            </form>
-          </section>
-        </div>
-      )}
+              <header>
+                <div>
+                  <h2 id="create-document-title">New document</h2>
+                  <p>Give it a title to get started — you can rename it later.</p>
+                </div>
+                <button onClick={() => setCreateOpen(false)} aria-label="Close create document dialog">
+                  <X size={18} />
+                </button>
+              </header>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const form = new FormData(e.currentTarget);
+                  onCreate(String(form.get("title") ?? "").trim());
+                }}
+              >
+                <label>
+                  Title
+                  <input name="title" placeholder="Untitled document" maxLength={200} autoFocus />
+                </label>
+                <button className="primary wide" disabled={creating}>
+                  {creating ? "Creating…" : "Create document"}
+                </button>
+              </form>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AppShell>
   );
 }

@@ -6,8 +6,11 @@ import { ApiError } from "@/lib/api-client";
 import * as announcementsApi from "@/lib/api/announcements.api";
 import * as liveRequestsApi from "@/lib/api/live-requests.api";
 import { useCountdown } from "@/lib/use-countdown";
+import { staggerContainer, staggerItem, tapScale } from "@/lib/motion";
 import type { Announcement, LiveStreamRequest, LiveStreamRequestStatus } from "@/lib/types";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { Radio } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const REQUEST_STATUS_LABEL: Record<LiveStreamRequestStatus, string> = {
@@ -26,19 +29,20 @@ function AnnouncementRow({ announcement }: { announcement: Announcement }) {
   const router = useRouter();
   const { label, isLive } = useCountdown(announcement.scheduledAt);
   return (
-    <div className="activity-row">
+    <motion.div className="activity-row" variants={staggerItem}>
       <div>
         <strong>{announcement.title}</strong>
         <small>{announcement.body}</small>
       </div>
-      <button
+      <motion.button
         className={isLive ? "primary small" : "plain"}
         disabled={!announcement.scheduledAt || !isLive}
         onClick={() => router.push(`/live/${announcement.id}`)}
+        whileTap={isLive ? tapScale : undefined}
       >
         {announcement.scheduledAt ? (isLive ? "Join" : label) : "Posted"}
-      </button>
-    </div>
+      </motion.button>
+    </motion.div>
   );
 }
 
@@ -120,8 +124,15 @@ export default function LivePage() {
         <section className="card" style={{ marginBottom: 20 }}>
           <div className="card-head"><div><h3>Upcoming & live</h3><p>Events you&rsquo;re eligible to see</p></div></div>
           {announcements === null && <p className="quiet">Loading…</p>}
-          {announcements?.length === 0 && <p className="quiet">Nothing scheduled right now.</p>}
-          {announcements?.map((a) => <AnnouncementRow announcement={a} key={a.id} />)}
+          {announcements?.length === 0 && (
+            <div className="empty-state">
+              <Radio size={26} />
+              <p className="quiet">Nothing scheduled right now.</p>
+            </div>
+          )}
+          <motion.div variants={staggerContainer} initial="hidden" animate="visible">
+            {announcements?.map((a) => <AnnouncementRow announcement={a} key={a.id} />)}
+          </motion.div>
         </section>
 
         <section className="card" style={{ marginBottom: 20 }}>
@@ -161,14 +172,16 @@ export default function LivePage() {
           <div className="card-head"><div><h3>Your requests</h3></div></div>
           {myRequests === null && <p className="quiet">Loading…</p>}
           {myRequests?.length === 0 && <p className="quiet">You haven&rsquo;t requested to go live yet.</p>}
-          {myRequests?.map((r) => (
-            <div className="activity-row" key={r.id}>
-              <div><strong>{r.title}</strong><small>{r.description}</small></div>
-              <span style={{ fontSize: 10, fontWeight: 700, color: REQUEST_STATUS_COLOR[r.status] }}>
-                {REQUEST_STATUS_LABEL[r.status]}
-              </span>
-            </div>
-          ))}
+          <motion.div variants={staggerContainer} initial="hidden" animate="visible">
+            {myRequests?.map((r) => (
+              <motion.div className="activity-row" key={r.id} variants={staggerItem}>
+                <div><strong>{r.title}</strong><small>{r.description}</small></div>
+                <span style={{ fontSize: 10, fontWeight: 700, color: REQUEST_STATUS_COLOR[r.status] }}>
+                  {REQUEST_STATUS_LABEL[r.status]}
+                </span>
+              </motion.div>
+            ))}
+          </motion.div>
         </section>
       </div>
     </AppShell>

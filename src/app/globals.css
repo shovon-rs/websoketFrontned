@@ -6,8 +6,32 @@
 	--bg: #f7f8f5;
 	--white: #fff;
 	--green: #183e32;
+	--green-deep: #0d1f19;
+	--green-light: #275943;
 	--accent: #ff6f4f;
+	--accent-deep: #e85a3c;
+	--accent-soft: #ffe4da;
 	--soft: #f2f4f0;
+
+	/* Elevation scale — layered, low-saturation shadows so cards/menus read as physically
+	   lifted rather than flat-with-a-border. Used consistently instead of ad hoc box-shadows. */
+	--shadow-xs: 0 1px 2px rgba(15, 30, 24, 0.05);
+	--shadow-sm: 0 1px 3px rgba(15, 30, 24, 0.06), 0 1px 2px rgba(15, 30, 24, 0.04);
+	--shadow-md: 0 8px 20px -6px rgba(15, 30, 24, 0.12), 0 2px 6px rgba(15, 30, 24, 0.05);
+	--shadow-lg: 0 20px 44px -12px rgba(15, 30, 24, 0.18), 0 6px 16px rgba(15, 30, 24, 0.06);
+	--shadow-glow: 0 10px 28px -8px rgba(255, 111, 79, 0.38);
+
+	--radius-sm: 8px;
+	--radius-md: 12px;
+	--radius-lg: 18px;
+	--radius-xl: 24px;
+
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+	--dur-fast: 150ms;
+	--dur-base: 240ms;
+	--dur-slow: 420ms;
 }
 * {
 	box-sizing: border-box;
@@ -19,6 +43,13 @@ body {
 	background: var(--bg);
 	color: var(--ink);
 	font-family: "DM Sans", sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+body {
+	background-image:
+		radial-gradient(680px circle at 8% -8%, rgba(24, 62, 50, 0.06), transparent 60%),
+		radial-gradient(560px circle at 100% 0%, rgba(255, 111, 79, 0.05), transparent 55%);
+	background-attachment: fixed;
 }
 button,
 input,
@@ -32,6 +63,22 @@ a {
 button {
 	cursor: pointer;
 }
+a, button, input, textarea, select {
+	transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out),
+		border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out),
+		transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+button:active {
+	transform: scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+		scroll-behavior: auto !important;
+	}
+}
 @keyframes shimmer-sweep {
 	0% {
 		background-position: 200% 0;
@@ -40,11 +87,30 @@ button {
 		background-position: -200% 0;
 	}
 }
+@keyframes fade-in-up {
+	from { opacity: 0; transform: translateY(10px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+	animation: fade-in-up var(--dur-slow) var(--ease-out) both;
+}
+@keyframes spin {
+	to { transform: rotate(360deg); }
+}
+.spin {
+	animation: spin 0.8s linear infinite;
+}
+.btn-spinner {
+	display: inline-flex;
+	vertical-align: -2px;
+	margin-right: 7px;
+}
 .shimmer {
 	display: block;
-	background: linear-gradient(100deg, #edf1ee 30%, #f8faf8 50%, #edf1ee 70%);
+	background: linear-gradient(100deg, #e6ebe6 25%, #f9fbf9 48%, #e6ebe6 70%);
 	background-size: 220% 100%;
-	animation: shimmer-sweep 1.4s ease-in-out infinite;
+	animation: shimmer-sweep 1.5s ease-in-out infinite;
+	box-shadow: var(--shadow-xs);
 }
 .shimmer-line {
 	width: 100%;
@@ -132,6 +198,44 @@ button {
 .user-search-shimmer {
 	padding: 4px 12px;
 }
+.shimmer-pill-row {
+	display: flex;
+	gap: 8px;
+	margin-top: 16px;
+}
+.shimmer-pill {
+	width: 78px;
+	height: 24px;
+	border-radius: 20px;
+}
+.shimmer-board {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 16px;
+	margin-top: 22px;
+}
+.shimmer-board-col {
+	background: var(--soft);
+	border-radius: var(--radius-lg);
+	padding: 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.shimmer-board-card {
+	height: 64px;
+	border-radius: var(--radius-md);
+}
+.shimmer-calendar-grid {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 8px;
+	margin-top: 20px;
+}
+.shimmer-calendar-cell {
+	height: 88px;
+	border-radius: 10px;
+}
 @media (prefers-reduced-motion: reduce) {
 	.shimmer {
 		animation: none;
@@ -146,11 +250,13 @@ button {
 	position: fixed;
 	width: 236px;
 	height: 100vh;
-	background: #12382e;
+	background: linear-gradient(175deg, #16463a 0%, #0f2f27 60%, var(--green-deep) 100%);
 	color: #d9e6df;
 	padding: 28px 18px 20px;
 	display: flex;
 	flex-direction: column;
+	box-shadow: var(--shadow-lg);
+	z-index: 5;
 }
 .brand {
 	display: flex;
@@ -167,8 +273,9 @@ button {
 	display: grid;
 	place-items: center;
 	border-radius: 10px;
-	background: var(--accent);
+	background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
 	color: white;
+	box-shadow: 0 4px 12px rgba(255, 111, 79, 0.4);
 }
 .nav {
 	margin-top: 42px;
@@ -184,6 +291,7 @@ button {
 .nav a,
 .sidebar-bottom > a,
 .sidebar-bottom > button {
+	position: relative;
 	height: 46px;
 	display: flex;
 	align-items: center;
@@ -202,12 +310,34 @@ button {
 	cursor: pointer;
 	font-family: inherit;
 }
+.nav a svg, .sidebar-bottom > a svg, .sidebar-bottom > button svg {
+	transition: transform var(--dur-base) var(--ease-spring);
+}
+.nav a:hover svg, .sidebar-bottom > a:hover svg, .sidebar-bottom > button:hover svg {
+	transform: translateX(2px) scale(1.05);
+}
 .nav a:hover,
 .sidebar-bottom > a:hover,
-.sidebar-bottom > button:hover,
-.nav a.active {
-	background: #214b40;
+.sidebar-bottom > button:hover {
+	background: rgba(255, 255, 255, 0.06);
 	color: #fff;
+}
+.nav a.active {
+	background: linear-gradient(90deg, rgba(255, 111, 79, 0.18) 0%, rgba(255, 111, 79, 0.05) 100%);
+	color: #fff;
+	font-weight: 650;
+}
+.nav a.active::before {
+	content: "";
+	position: absolute;
+	left: -6px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 3px;
+	height: 20px;
+	border-radius: 3px;
+	background: var(--accent);
+	box-shadow: 0 0 10px 1px rgba(255, 111, 79, 0.7);
 }
 .nav b {
 	margin-left: auto;
@@ -252,12 +382,17 @@ button {
 }
 .topbar {
 	height: 86px;
-	background: #fff;
+	background: rgba(255, 255, 255, 0.82);
+	backdrop-filter: blur(10px) saturate(1.4);
+	-webkit-backdrop-filter: blur(10px) saturate(1.4);
 	border-bottom: 1px solid var(--line);
 	padding: 0 36px;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	position: sticky;
+	top: 0;
+	z-index: 4;
 }
 .topbar h1 {
 	font: 700 21px Manrope;
@@ -284,6 +419,12 @@ button {
 	gap: 9px;
 	padding: 0 11px;
 	color: #8b948f;
+}
+.search-btn:hover {
+	border-color: #cfd9d3;
+	background: #fff;
+	box-shadow: var(--shadow-sm);
+	transform: translateY(-1px);
 }
 .search-btn span {
 	font-size: 12px;
@@ -420,6 +561,17 @@ button {
 	font-weight: 800;
 	line-height: 1;
 	box-shadow: 0 2px 7px #b43d2d38;
+	animation: badge-pop 320ms var(--ease-spring);
+}
+@keyframes badge-pop {
+	0% { transform: scale(0); }
+	70% { transform: scale(1.15); }
+	100% { transform: scale(1); }
+}
+.icon-btn:hover {
+	border-color: #cfd9d3;
+	box-shadow: var(--shadow-sm);
+	transform: translateY(-1px);
 }
 .page {
 	padding: 30px 36px;
@@ -452,7 +604,7 @@ button {
 .danger {
 	border: 0;
 	border-radius: 8px;
-	background: var(--accent);
+	background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
 	color: #fff;
 	height: 42px;
 	padding: 0 17px;
@@ -462,9 +614,20 @@ button {
 	gap: 8px;
 	font-weight: 600;
 	font-size: 12px;
+	box-shadow: 0 2px 8px rgba(255, 111, 79, 0.25);
 }
 .primary:hover {
-	background: #ec5d3e;
+	box-shadow: var(--shadow-glow);
+	transform: translateY(-1px);
+}
+.primary:active {
+	transform: translateY(0) scale(0.97);
+}
+.primary:disabled {
+	opacity: 0.55;
+	box-shadow: none;
+	transform: none;
+	cursor: default;
 }
 .primary.small {
 	height: 36px;
@@ -473,7 +636,12 @@ button {
 	width: 100%;
 }
 .danger {
-	background: #d94f42;
+	background: linear-gradient(135deg, #e0574a 0%, #c8402f 100%);
+	box-shadow: 0 2px 8px rgba(217, 79, 66, 0.25);
+}
+.danger:hover {
+	box-shadow: 0 10px 28px -8px rgba(217, 79, 66, 0.45);
+	transform: translateY(-1px);
 }
 .danger.small {
 	height: 34px;
@@ -584,8 +752,22 @@ a.metric:hover {
 .card {
 	background: #fff;
 	border: 1px solid var(--line);
-	border-radius: 12px;
+	border-radius: var(--radius-lg);
 	padding: 20px;
+	box-shadow: var(--shadow-xs);
+	transition: box-shadow var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out),
+		border-color var(--dur-base) var(--ease-out);
+}
+.card:hover {
+	box-shadow: var(--shadow-md);
+	border-color: #dbe2dc;
+}
+a.project-card, a.task-row, a.calendar-chip {
+	transition: box-shadow var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+a.project-card:hover {
+	box-shadow: var(--shadow-md);
+	transform: translateY(-3px);
 }
 .card-head {
 	display: flex;
@@ -735,6 +917,13 @@ a.metric:hover {
 }
 .avatar i.online {
 	background: #42ad72;
+	box-shadow: 0 0 0 0 rgba(66, 173, 114, 0.55);
+	animation: avatar-online-pulse 2.2s var(--ease-in-out) infinite;
+}
+@keyframes avatar-online-pulse {
+	0% { box-shadow: 0 0 0 0 rgba(66, 173, 114, 0.5); }
+	70% { box-shadow: 0 0 0 6px rgba(66, 173, 114, 0); }
+	100% { box-shadow: 0 0 0 0 rgba(66, 173, 114, 0); }
 }
 .avatar i.offline {
 	background: #b5bcb7;
@@ -961,6 +1150,18 @@ a.activity-row:hover {
 .quick-actions-grid > a:hover > svg {
 	transform: translate(2px, -2px);
 	color: var(--accent);
+}
+.quick-action-icon {
+	transition: transform var(--dur-base) var(--ease-spring);
+}
+.quick-actions-grid > a:hover .quick-action-icon {
+	transform: scale(1.1) rotate(-4deg);
+}
+.metric-icon {
+	transition: transform var(--dur-base) var(--ease-spring);
+}
+a.metric:hover .metric-icon {
+	transform: scale(1.08);
 }
 @media (max-width: 1150px) {
 	.quick-actions-grid {
@@ -1509,6 +1710,7 @@ a.attachment-chip {
 	border-bottom: 1px solid #eff2ef;
 	background: #fff;
 	text-align: left;
+	transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 .people-list > button:last-of-type {
 	border-bottom: 0;
@@ -1516,6 +1718,14 @@ a.attachment-chip {
 .people-list > button:hover,
 .people-list > button:focus-visible {
 	background: #f7faf8;
+	transform: translateX(2px);
+}
+.people-list > button:hover > svg {
+	color: var(--accent);
+	transform: scale(1.1);
+}
+.people-list > button > svg {
+	transition: color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-spring);
 }
 .people-list > button:disabled {
 	opacity: 0.65;
@@ -1542,9 +1752,19 @@ a.attachment-chip {
 }
 .people-empty {
 	margin: 0;
-	padding: 22px 20px;
+	padding: 40px 20px;
 	color: var(--muted);
 	font-size: 10px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	text-align: center;
+}
+.people-empty svg {
+	color: #c3ccc6;
+	width: 30px;
+	height: 30px;
 }
 .notification-card {
 	padding: 0;
@@ -1562,9 +1782,26 @@ a.attachment-chip {
 	gap: 14px;
 	padding: 17px 20px;
 	text-align: left;
+	position: relative;
+	transition: background var(--dur-fast) var(--ease-out);
+}
+.notification-row:hover {
+	background: #f7faf8;
 }
 .notification-row.unread {
 	background: #fffaf7;
+}
+.notification-row.unread:hover {
+	background: #fff4ec;
+}
+.notification-row.unread:before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 3px;
+	background: var(--accent);
 }
 .notification-row > span:nth-child(2) {
 	flex: 1;
@@ -1587,6 +1824,26 @@ a.attachment-chip {
 	height: 7px;
 	border-radius: 50%;
 	background: var(--accent);
+	animation: unread-dot-pulse 2.2s var(--ease-in-out) infinite;
+}
+@keyframes unread-dot-pulse {
+	0% { box-shadow: 0 0 0 0 rgba(255, 111, 79, 0.5); }
+	70% { box-shadow: 0 0 0 6px rgba(255, 111, 79, 0); }
+	100% { box-shadow: 0 0 0 0 rgba(255, 111, 79, 0); }
+}
+.notification-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding: 48px 20px;
+	text-align: center;
+	color: var(--muted);
+}
+.notification-empty svg {
+	width: 34px;
+	height: 34px;
+	color: #c3ccc6;
 }
 .notification-live {
 	display: flex;
@@ -2191,6 +2448,11 @@ a.attachment-chip {
 	border-radius: 50%;
 	right: -240px;
 	bottom: -220px;
+	animation: auth-art-breathe 8s var(--ease-in-out) infinite;
+}
+@keyframes auth-art-breathe {
+	0%, 100% { transform: scale(1); opacity: 1; }
+	50% { transform: scale(1.06); opacity: 0.7; }
 }
 .auth-art .brand {
 	padding: 0;
@@ -2260,6 +2522,28 @@ a.attachment-chip {
 .auth-form input:focus {
 	border-color: #4e7c6d;
 	box-shadow: 0 0 0 3px #3e796a18;
+}
+.password-strength {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 8px;
+}
+.password-strength-track {
+	flex: 1;
+	height: 4px;
+	border-radius: 999px;
+	background: var(--soft);
+	overflow: hidden;
+}
+.password-strength-fill {
+	height: 100%;
+	border-radius: 999px;
+}
+.password-strength > span {
+	font-size: 9px;
+	font-weight: 600;
+	flex: none;
 }
 .auth-form form > small {
 	display: block;
@@ -2986,3 +3270,355 @@ button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offs
 	.share-dialog { padding: 16px; }
 	.primary, .danger { height: auto; min-height: 42px; padding-top: 8px; padding-bottom: 8px; }
 }
+
+/* ---------------------------------------------------------------------------
+   Chat / Calls / Live tracking / Live-announcements — motion & polish pass
+   --------------------------------------------------------------------------- */
+
+/* Conversation list rows: hover lift + smoother selected state. */
+.conversation {
+	transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out),
+		transform var(--dur-fast) var(--ease-out);
+}
+.conversation:hover {
+	background: #f7f9f7;
+	transform: translateX(2px);
+}
+.conversation.selected {
+	box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Call-history rows: subtle lift on hover + a direction icon that nudges on hover. */
+.call-row {
+	border-radius: var(--radius-md);
+	transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out),
+		transform var(--dur-fast) var(--ease-out);
+	margin: 0 -12px;
+	padding: 11px 12px;
+}
+.call-row:hover {
+	background: #f7f9f7;
+	box-shadow: var(--shadow-xs);
+	transform: translateY(-1px);
+}
+.call-row:hover .call-direction-icon {
+	transform: scale(1.15);
+}
+.call-direction-icon {
+	transition: transform var(--dur-fast) var(--ease-spring);
+	display: inline-flex;
+}
+
+/* Typing indicator: animated bounce dots. */
+.typing > span i {
+	animation: typing-bounce 1.2s var(--ease-in-out) infinite;
+}
+.typing > span i:nth-child(2) {
+	animation-delay: 0.15s;
+}
+.typing > span i:nth-child(3) {
+	animation-delay: 0.3s;
+}
+@keyframes typing-bounce {
+	0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+	30% { transform: translateY(-3px); opacity: 1; }
+}
+
+/* Attachment chip mid-upload: gentle pulse so the "Uploading…" state reads as active. */
+.attachment-chip.uploading {
+	animation: attachment-pulse 1.4s var(--ease-in-out) infinite;
+}
+@keyframes attachment-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.6; }
+}
+
+/* Message delivery-status swap (Sending… -> Delivered ✓) gets a tiny settle instead of a hard cut. */
+.delivered {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+}
+
+/* Call room: smoother control-button state transitions (mute/camera/screen-share fill). */
+.call-controls button {
+	transition: background var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-spring),
+		width var(--dur-base) var(--ease-out), border-radius var(--dur-base) var(--ease-out);
+}
+.call-controls button:hover {
+	transform: translateY(-2px);
+}
+.call-controls button:active {
+	transform: translateY(0) scale(0.94);
+}
+
+/* Ringing/connecting indicator dot inside the call-info pill. */
+.call-info > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+}
+.call-info > span > i {
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: #fff;
+	animation: call-status-pulse 1.5s var(--ease-in-out) infinite;
+}
+@keyframes call-status-pulse {
+	0%, 100% { opacity: 0.5; transform: scale(0.85); }
+	50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* Ringing self/remote avatar placeholder — a soft breathing glow while we wait to connect. */
+.video-tile.connecting > span {
+	animation: tile-breathe 1.8s var(--ease-in-out) infinite;
+}
+@keyframes tile-breathe {
+	0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.12); }
+	50% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+}
+
+/* Live countdown pill: glow pulse once the event is actually live. */
+.live-countdown-pill.live {
+	animation: live-pill-glow 2.2s var(--ease-in-out) infinite;
+}
+@keyframes live-pill-glow {
+	0%, 100% { box-shadow: 0 0 0 0 rgba(51, 132, 94, 0.35); }
+	50% { box-shadow: 0 0 0 5px rgba(51, 132, 94, 0); }
+}
+
+/* Live badge dot inside the broadcast/viewer room call-info pill. */
+.call-info > span.live-badge {
+	background: #33845e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.typing > span i,
+	.attachment-chip.uploading,
+	.video-tile.connecting > span,
+	.live-countdown-pill.live,
+	.call-info > span > i {
+		animation: none;
+	}
+}
+
+/* ==========================================================================
+   Tasks / Projects / Calendar — motion & depth pass
+   New rules only; nothing above this line in the existing sections was
+   touched. ========================================================== */
+
+/* Task list rows: give the flat task list the same hover-lift treatment as
+   project cards/calendar chips (a.task-row was declared with the transition
+   in the foundation pass but never got its hover state or a class on the
+   markup — added here + on the row markup). */
+a.activity-row.task-row:hover,
+a.task-row:hover {
+	box-shadow: var(--shadow-sm);
+	transform: translateY(-2px);
+}
+
+/* Status filter pills: smoother active-state swap + a little press feedback. */
+.task-filters button {
+	transition: background-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out),
+		border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out),
+		transform var(--dur-fast) var(--ease-out);
+}
+.task-filters button.primary {
+	box-shadow: var(--shadow-sm);
+}
+
+/* Task detail: status badge swap + priority/due pills get a touch of depth. */
+.task-status-swap {
+	display: inline-flex;
+}
+.task-meta .priority-badge,
+.task-meta strong {
+	transition: box-shadow var(--dur-base) var(--ease-out);
+}
+
+/* Attachment rows: hover affordance (button already had one; the row itself
+   didn't). */
+.task-attachment-row {
+	border-radius: var(--radius-sm);
+	transition: background-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+.task-attachment-row:hover {
+	background: #fafbf9;
+	transform: translateX(2px);
+}
+
+/* Assignee avatar row on the task detail page. */
+.task-assignee-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.task-assignee-row .avatar {
+	margin-right: -8px;
+	border: 2px solid #fff;
+}
+
+/* Project cards: press feedback to go with the existing hover-lift. */
+a.project-card:active {
+	transform: translateY(-1px) scale(0.99);
+}
+.color-swatch {
+	transition: transform var(--dur-fast) var(--ease-spring), border-color var(--dur-base) var(--ease-out),
+		box-shadow var(--dur-base) var(--ease-out);
+}
+.color-swatch:hover {
+	transform: scale(1.08);
+}
+
+/* Kanban board: staggered entrance is handled in JS; these rules cover the
+   drag interaction feedback, which is the standout bit here. */
+.board-card {
+	transition: box-shadow var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out),
+		opacity var(--dur-fast) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+	will-change: transform;
+}
+.board-card:hover {
+	box-shadow: var(--shadow-sm);
+	transform: translateY(-2px);
+}
+.board-card.dragging {
+	opacity: 0.55;
+	transform: scale(1.04) rotate(-1.5deg);
+	box-shadow: var(--shadow-lg);
+	cursor: grabbing;
+}
+.board-column {
+	transition: box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out),
+		background-color var(--dur-base) var(--ease-out);
+}
+.board-column.drag-over {
+	border-color: var(--accent);
+	background: var(--accent-soft);
+	box-shadow: 0 0 0 2px var(--accent) inset;
+}
+.board-column.drag-over .board-column-body {
+	background: transparent;
+}
+
+/* Calendar: the weekday header row is now a separate grid from the animated
+   month grid (so AnimatePresence only swaps the day cells), stacked with the
+   same gap the single grid used to have. */
+.calendar-grid-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	overflow: hidden;
+}
+.calendar-grid-weekdays {
+	margin-bottom: 0;
+}
+
+/* Calendar: day-cell hover + a tasteful "today" pulse ring. */
+.calendar-cell {
+	transition: box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out),
+		transform var(--dur-fast) var(--ease-out);
+}
+.calendar-cell:not(.outside):hover {
+	box-shadow: var(--shadow-sm);
+	border-color: #d7dbd4;
+	transform: translateY(-1px);
+}
+.calendar-cell.today {
+	position: relative;
+}
+.calendar-cell.today .calendar-cell-date {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 4px;
+	border-radius: 9px;
+	background: var(--accent);
+	color: #fff;
+	animation: today-pulse-ring 2.4s var(--ease-in-out) infinite;
+}
+@keyframes today-pulse-ring {
+	0%, 100% { box-shadow: 0 0 0 0 rgba(255, 111, 79, 0.45); }
+	60% { box-shadow: 0 0 0 5px rgba(255, 111, 79, 0); }
+}
+.calendar-chip {
+	transition: background-color var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+a.calendar-chip:hover {
+	transform: translateX(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.calendar-cell.today .calendar-cell-date {
+		animation: none;
+	}
+}
+
+/* ==========================================================================
+   Collab / Documents / Admin — motion pass (final)
+   ========================================================================== */
+
+/* Document list cards: hover lift consistent with board-card/calendar-cell elsewhere in the app. */
+.project-card {
+	transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out),
+		transform var(--dur-fast) var(--ease-out);
+}
+.project-card:hover {
+	transform: translateY(-3px);
+	box-shadow: var(--shadow-md);
+}
+
+/* "Write a document" CTA card: a little more visual presence than a plain card. */
+.doc-cta-card {
+	transition: box-shadow var(--dur-base) var(--ease-out);
+}
+.doc-cta-card:hover {
+	box-shadow: var(--shadow-md);
+}
+.doc-cta-btn {
+	transition: box-shadow var(--dur-base) var(--ease-out);
+}
+.doc-cta-btn:hover {
+	box-shadow: var(--shadow-glow);
+}
+
+/* Admin list rows (users / announcements / live requests): these render as plain divs, not
+   links, so they don't get a.activity-row's hover treatment — give them the same inset
+   highlight, applied unconditionally so hovering never shifts layout. */
+.activity-row.row-hover {
+	margin: 0 -20px;
+	padding: 11px 20px;
+	border-radius: var(--radius-sm);
+	transition: background-color var(--dur-fast) var(--ease-out);
+}
+.activity-row.row-hover:hover {
+	background: #f7f9f7;
+}
+
+/* Document editor chrome: smooth focus feedback on the title field instead of a hard outline
+   snap, and a responsive (not instant) toolbar. The editable content area itself is untouched. */
+.editor-top input {
+	border-radius: 6px;
+	padding: 2px 6px;
+	margin: -2px -6px;
+	transition: box-shadow var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+.editor-top input:focus {
+	box-shadow: 0 0 0 2px var(--accent-soft);
+	background: #fff;
+}
+.toolbar button {
+	transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.download-menu {
+	transform-origin: top right;
+}
+.download-menu button {
+	transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+/* Admin live-locations rows share .activity-row.selectable's existing hover/selected states —
+   nothing more needed there. */

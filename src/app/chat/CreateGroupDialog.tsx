@@ -2,6 +2,8 @@
 import { ApiError } from "@/lib/api-client";
 import * as chatApi from "@/lib/api/chat.api";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
+import { dialogBackdrop, dialogPanel } from "@/lib/motion";
+import { motion } from "framer-motion";
 import type { Conversation, User } from "@/lib/types";
 import { X } from "lucide-react";
 import { useState } from "react";
@@ -45,8 +47,24 @@ export function CreateGroupDialog({
   }
 
   return (
-    <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="create-group-title">
+    <motion.div
+      className="share-backdrop"
+      variants={dialogBackdrop}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+      <motion.section
+        className="share-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-group-title"
+        variants={dialogPanel}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <header>
           <div>
             <h2 id="create-group-title">New group</h2>
@@ -72,7 +90,7 @@ export function CreateGroupDialog({
             {submitting ? "Creating…" : "Create group"}
           </button>
         </form>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }

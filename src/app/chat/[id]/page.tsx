@@ -9,6 +9,14 @@ import type { Conversation, Message, User } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
 import { makeEventId } from "@/lib/ws-envelope";
 import {
+	scaleIn,
+	staggerContainer,
+	staggerItem,
+	tapScale,
+	EASE_OUT,
+} from "@/lib/motion";
+import { AnimatePresence, motion } from "framer-motion";
+import {
 	FileText,
 	Info,
 	Paperclip,
@@ -35,6 +43,17 @@ import { GroupInfoDialog } from "../GroupInfoDialog";
 const PALETTE = ["coral", "blue", "violet", "gold", "green"];
 const REACTION_PREFIX = "__relay_reaction__:";
 const REACTION_OPTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
+// Outgoing messages settle in from the right, incoming ones from the left — a subtle, tasteful
+// distinction rather than a full bubble-flight animation.
+const incomingBubble = {
+	hidden: { opacity: 0, x: -16, y: 6 },
+	visible: { opacity: 1, x: 0, y: 0, transition: { duration: 0.32, ease: EASE_OUT } },
+};
+const outgoingBubble = {
+	hidden: { opacity: 0, x: 16, y: 6 },
+	visible: { opacity: 1, x: 0, y: 0, transition: { duration: 0.32, ease: EASE_OUT } },
+};
 
 function parseReaction(
 	content: string,
@@ -566,34 +585,37 @@ export default function ChatConversation({
 							)}
 						</div>
 					)}
-					{conversations.map((c) => {
-						const other = c.members.find((m) => m.userId !== user?.id)?.user;
-						const label =
-							c.type === "group"
-								? (c.name ?? "Group")
-								: (other?.displayName ?? "Conversation");
-						const latestContent = c.messages?.[0]?.content;
-						const latestReaction = latestContent
-							? parseReaction(latestContent)
-							: null;
-						const preview = latestReaction
-							? `Reacted ${latestReaction.emoji} to a message`
-							: (latestContent ?? "No messages yet");
-						return (
-							<Link
-								href={`/chat/${c.id}`}
-								onClick={() => setConversationListOpen(false)}
-								className={`conversation ${conversationId === c.id ? "selected" : ""}`}
-								key={c.id}
-							>
-								<Avatar initials={initialsOf(label)} color={colorFor(c.id)} />
-								<div>
-									<strong>{label}</strong>
-									<small>{preview}</small>
-								</div>
-							</Link>
-						);
-					})}
+					<motion.div variants={staggerContainer} initial="hidden" animate="visible">
+						{conversations.map((c) => {
+							const other = c.members.find((m) => m.userId !== user?.id)?.user;
+							const label =
+								c.type === "group"
+									? (c.name ?? "Group")
+									: (other?.displayName ?? "Conversation");
+							const latestContent = c.messages?.[0]?.content;
+							const latestReaction = latestContent
+								? parseReaction(latestContent)
+								: null;
+							const preview = latestReaction
+								? `Reacted ${latestReaction.emoji} to a message`
+								: (latestContent ?? "No messages yet");
+							return (
+								<motion.div variants={staggerItem} key={c.id}>
+									<Link
+										href={`/chat/${c.id}`}
+										onClick={() => setConversationListOpen(false)}
+										className={`conversation ${conversationId === c.id ? "selected" : ""}`}
+									>
+										<Avatar initials={initialsOf(label)} color={colorFor(c.id)} />
+										<div>
+											<strong>{label}</strong>
+											<small>{preview}</small>
+										</div>
+									</Link>
+								</motion.div>
+							);
+						})}
+					</motion.div>
 				</aside>
 				<section className="thread">
 					<header className="thread-head">
@@ -645,8 +667,16 @@ export default function ChatConversation({
 							</button>
 						</div>
 					</header>
+					{/* AnimatePresence: gives the search bar reveal/dismiss an animated slide instead of a hard cut. */}
+					<AnimatePresence>
 					{messageSearchOpen && (
-						<div className="message-search">
+						<motion.div
+							className="message-search"
+							initial={{ opacity: 0, height: 0 }}
+							animate={{ opacity: 1, height: "auto" }}
+							exit={{ opacity: 0, height: 0 }}
+							transition={{ duration: 0.2, ease: EASE_OUT }}
+						>
 							<Search size={16} />
 							<input
 								value={messageSearch}
@@ -669,8 +699,9 @@ export default function ChatConversation({
 							>
 								<X size={16} />
 							</button>
-						</div>
+						</motion.div>
 					)}
+					</AnimatePresence>
 					<div className="messages">
 						{normalizedSearch && visibleMessages.length === 0 && (
 							<p className="message-search-empty">
@@ -692,9 +723,12 @@ export default function ChatConversation({
 								? messageReactions?.get(user.id)
 								: undefined;
 							return (
-								<div
+								<motion.div
 									className={`message ${mine ? "mine" : ""}`}
 									key={m.eventId}
+									variants={mine ? outgoingBubble : incomingBubble}
+									initial="hidden"
+									animate="visible"
 								>
 									{!mine && (
 										<Avatar
@@ -752,10 +786,18 @@ export default function ChatConversation({
 											>
 												<Smile size={15} />
 											</button>
+											<AnimatePresence>
 											{reactionPickerFor === m.eventId && (
-												<div className="message-reaction-picker">
+												<motion.div
+													className="message-reaction-picker"
+													variants={scaleIn}
+													initial="hidden"
+													animate="visible"
+													exit="exit"
+												>
 													{REACTION_OPTIONS.map((emoji) => (
-														<button
+														<motion.button
+															whileTap={tapScale}
 															className={myReaction === emoji ? "selected" : ""}
 															key={emoji}
 															onClick={() =>
@@ -767,15 +809,17 @@ export default function ChatConversation({
 															aria-label={`${myReaction === emoji ? "Remove" : "React with"} ${emoji}`}
 														>
 															{emoji}
-														</button>
+														</motion.button>
 													))}
-												</div>
+												</motion.div>
 											)}
+											</AnimatePresence>
 										</div>
 										{reactionCounts.size > 0 && (
 											<div className="message-reactions">
+												<AnimatePresence initial={false}>
 												{Array.from(reactionCounts).map(([emoji, count]) => (
-													<button
+													<motion.button
 														key={emoji}
 														className={myReaction === emoji ? "mine" : ""}
 														onClick={() =>
@@ -785,28 +829,49 @@ export default function ChatConversation({
 															)
 														}
 														aria-label={`${emoji}, ${count} ${count === 1 ? "reaction" : "reactions"}`}
+														initial={{ opacity: 0, scale: 0.5 }}
+														animate={{ opacity: 1, scale: 1 }}
+														exit={{ opacity: 0, scale: 0.5 }}
+														transition={{ duration: 0.22, ease: EASE_OUT }}
+														whileTap={tapScale}
 													>
 														{emoji}
 														<span>{count}</span>
-													</button>
+													</motion.button>
 												))}
+												</AnimatePresence>
 											</div>
 										)}
 										{mine && (
-											<small className="delivered">
-												{m.status === "sending"
-													? "Sending…"
-													: m.status === "failed"
-														? "Failed to send"
-														: "Delivered ✓"}
-											</small>
+											<AnimatePresence mode="wait" initial={false}>
+												<motion.small
+													className="delivered"
+													key={m.status}
+													initial={{ opacity: 0, scale: 0.9 }}
+													animate={{ opacity: 1, scale: 1 }}
+													transition={{ duration: 0.18, ease: EASE_OUT }}
+												>
+													{m.status === "sending"
+														? "Sending…"
+														: m.status === "failed"
+															? "Failed to send"
+															: "Delivered ✓"}
+												</motion.small>
+											</AnimatePresence>
 										)}
 									</div>
-								</div>
+								</motion.div>
 							);
 						})}
+						<AnimatePresence>
 						{typingNames.length > 0 && (
-							<div className="typing">
+							<motion.div
+								className="typing"
+								initial={{ opacity: 0, y: 6 }}
+								animate={{ opacity: 1, y: 0 }}
+								exit={{ opacity: 0, y: 6 }}
+								transition={{ duration: 0.2, ease: EASE_OUT }}
+							>
 								<span>
 									<i />
 									<i />
@@ -816,13 +881,14 @@ export default function ChatConversation({
 									{typingNames.join(", ")}{" "}
 									{typingNames.length > 1 ? "are" : "is"} typing
 								</small>
-							</div>
+							</motion.div>
 						)}
+						</AnimatePresence>
 						<div ref={messagesEndRef} aria-hidden="true" />
 					</div>
 					<div className="composer">
 						{attachment && (
-							<div className="attachment-chip">
+							<div className={`attachment-chip${uploadingAttachment ? " uploading" : ""}`}>
 								<FileText size={16} />
 								<span>
 									<strong>{attachment.name}</strong>
@@ -849,8 +915,16 @@ export default function ChatConversation({
 								{composerError}
 							</p>
 						)}
+						<AnimatePresence>
 						{emojiOpen && (
-							<div className="emoji-picker" aria-label="Choose an emoji">
+							<motion.div
+								className="emoji-picker"
+								aria-label="Choose an emoji"
+								variants={scaleIn}
+								initial="hidden"
+								animate="visible"
+								exit="exit"
+							>
 								{[
 									"😀",
 									"😂",
@@ -876,8 +950,9 @@ export default function ChatConversation({
 										{emoji}
 									</button>
 								))}
-							</div>
+							</motion.div>
 						)}
+						</AnimatePresence>
 						<div>
 							<input
 								ref={fileInputRef}
@@ -913,20 +988,22 @@ export default function ChatConversation({
 							>
 								<Smile />
 							</button>
-							<button
+							<motion.button
 								className="send"
 								onClick={sendMessage}
 								disabled={uploadingAttachment}
 								aria-label="Send message"
+								whileTap={tapScale}
 							>
 								<Send />
-							</button>
+							</motion.button>
 						</div>
 						<small>Press Enter to send · Shift + Enter for a new line</small>
 					</div>
 				</section>
 			</div>
 
+			<AnimatePresence>
 			{groupDialogOpen && (
 				<CreateGroupDialog
 					onClose={() => setGroupDialogOpen(false)}
@@ -939,7 +1016,9 @@ export default function ChatConversation({
 					}}
 				/>
 			)}
+			</AnimatePresence>
 
+			<AnimatePresence>
 			{infoOpen && activeConversation && user && (
 				<GroupInfoDialog
 					conversation={activeConversation}
@@ -955,6 +1034,7 @@ export default function ChatConversation({
 					}}
 				/>
 			)}
+			</AnimatePresence>
 		</AppShell>
 	);
 }

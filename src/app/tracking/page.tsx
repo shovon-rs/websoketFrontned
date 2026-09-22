@@ -5,9 +5,11 @@ import { UserSearchDropdown } from "@/components/UserSearchDropdown";
 import { TrackingMap, TrackingMapMarker } from "@/components/TrackingMap";
 import { Clock, LocateFixed, Navigation, ShieldCheck, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 import { useWs } from "@/lib/ws-context";
 import * as trackingApi from "@/lib/api/tracking.api";
+import { fadeInUp, staggerContainer, staggerItem } from "@/lib/motion";
 import type { User } from "@/lib/types";
 
 const PALETTE = ["#e35e40", "#407ac1", "#745bca", "#bc7923", "#33845e"];
@@ -266,32 +268,36 @@ export default function Tracking() {
           <div className="tracking-person"><Avatar initials={user ? user.displayName.slice(0, 2).toUpperCase() : "?"} color="green" online={active}/><span><strong>{user?.displayName ?? "You"}</strong><small>{active ? "Sharing precise location" : "Sharing paused"}</small></span></div>
           <div className="tracking-stats"><div><Navigation/><strong>{distanceKm.toFixed(1)} km</strong><small>Distance</small></div><div><Clock/><strong>{formatDuration(durationMs)}</strong><small>Duration</small></div></div>
           {error && <p className="auth-error">{error}</p>}
-          <button className={active ? "danger wide" : "primary wide"} onClick={active ? stopSharing : startSharing}>{active ? "Stop sharing" : "Start sharing"}</button>
+          <motion.button className={active ? "danger wide" : "primary wide"} onClick={active ? stopSharing : startSharing} whileTap={{ scale: 0.97 }}>{active ? "Stop sharing" : "Start sharing"}</motion.button>
 
-          {active && <div style={{ marginTop: 16 }}>
+          <AnimatePresence>
+          {active && <motion.div style={{ marginTop: 16 }} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
             <p className="quiet" style={{ marginBottom: 8 }}>Share your live location with</p>
             <UserSearchDropdown onSelect={shareWith} placeholder="Search people to share with…" />
             {shareError && <p className="auth-error" style={{ marginTop: 8 }}>{shareError}</p>}
-            {viewers.length > 0 && <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
-              {viewers.map((v) => <div className="selected-recipient" key={v.id}>
+            {viewers.length > 0 && <motion.div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }} variants={staggerContainer} initial="hidden" animate="visible">
+              {viewers.map((v) => <motion.div className="selected-recipient" key={v.id} variants={staggerItem}>
                 <Avatar initials={v.displayName.slice(0, 2).toUpperCase()} color="blue" size="sm"/>
                 <div><strong>{v.displayName}</strong><small>{v.email}</small></div>
                 <button onClick={() => stopSharingWith(v.id)}><X size={12} style={{ verticalAlign: "-2px", marginRight: 4 }}/>Remove</button>
-              </div>)}
-            </div>}
-          </div>}
+              </motion.div>)}
+            </motion.div>}
+          </motion.div>}
+          </AnimatePresence>
         </section>
 
-        {sharedSessions.length > 0 && <section className="card">
+        {sharedSessions.length > 0 && <motion.section className="card" variants={fadeInUp} initial="hidden" animate="visible">
           <div className="card-head"><div><h3>Shared with you</h3><p>Live locations from your team</p></div></div>
-          {sharedSessions.map((s) => {
-            const hasPosition = !!positions[s.sessionId];
-            return <button className="activity-row" style={{ width: "100%", background: "transparent", border: 0, cursor: "pointer", textAlign: "left" }} key={s.sessionId} onClick={() => setFocusId(s.sessionId)}>
-              <Avatar initials={s.owner.displayName.slice(0, 2).toUpperCase()} color="blue" online={hasPosition} size="sm"/>
-              <div><strong>{s.owner.displayName}</strong><small>{hasPosition ? "Live" : "Waiting for location…"}</small></div>
-            </button>;
-          })}
-        </section>}
+          <motion.div variants={staggerContainer} initial="hidden" animate="visible">
+            {sharedSessions.map((s) => {
+              const hasPosition = !!positions[s.sessionId];
+              return <motion.button className="activity-row selectable" variants={staggerItem} key={s.sessionId} onClick={() => setFocusId(s.sessionId)}>
+                <Avatar initials={s.owner.displayName.slice(0, 2).toUpperCase()} color="blue" online={hasPosition} size="sm"/>
+                <div><strong>{s.owner.displayName}</strong><small>{hasPosition ? "Live" : "Waiting for location…"}</small></div>
+              </motion.button>;
+            })}
+          </motion.div>
+        </motion.section>}
 
         <section className="privacy"><ShieldCheck/><div><strong>Your privacy matters</strong><p>Only people you explicitly share with can see your location. History is removed after 30 days, and you can delete it at any time.</p></div></section>
       </aside>

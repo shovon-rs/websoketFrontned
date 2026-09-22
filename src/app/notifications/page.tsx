@@ -2,14 +2,18 @@
 import { AppShell } from "@/components/AppShell";
 import * as notificationsApi from "@/lib/api/notifications.api";
 import { useAuth } from "@/lib/auth-context";
+import { staggerContainer, staggerItem, tapScale } from "@/lib/motion";
 import { isPushSupported, subscribePush } from "@/lib/push";
 import type { AppNotification } from "@/lib/types";
 import { useCountdown } from "@/lib/use-countdown";
 import { useWs } from "@/lib/ws-context";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	Bell,
+	BellOff,
 	BellRing,
 	Check,
+	CheckCheck,
 	FileText,
 	MessageCircle,
 	PhoneIncoming,
@@ -85,6 +89,7 @@ export default function Notifications() {
 	const [pushState, setPushState] = useState<
 		"idle" | "enabling" | "enabled" | "unsupported" | "error"
 	>(isPushSupported() ? "idle" : "unsupported");
+	const [justMarkedAll, setJustMarkedAll] = useState(false);
 
 	// AppShell redirects to /login when unauthenticated, but it still renders this component's
 	// effects on the way there — wait for a real session so we don't fire a doomed request.
@@ -137,6 +142,8 @@ export default function Notifications() {
 			})),
 		);
 		send("notification:read-all", {});
+		setJustMarkedAll(true);
+		window.setTimeout(() => setJustMarkedAll(false), 1600);
 	}
 
 	function openNotification(notification: AppNotification) {
@@ -151,7 +158,12 @@ export default function Notifications() {
 			subtitle="Stay up to date with your workspace."
 		>
 			<div className="page narrow">
-				<section className="card notification-card">
+				<motion.section
+					className="card notification-card"
+					initial={{ opacity: 0, y: 14 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+				>
 					<div className="card-head">
 						<div>
 							<h3>All notifications</h3>
@@ -175,44 +187,68 @@ export default function Notifications() {
 											: "Enable push"}
 								</button>
 							)}
-							<button
+							<motion.button
 								className="plain"
 								onClick={markAllRead}
 								disabled={unreadCount === 0}
+								whileTap={tapScale}
 							>
-								Mark all as read
-							</button>
+								{justMarkedAll ? (
+									<motion.span
+										key="done"
+										initial={{ opacity: 0, scale: 0.85 }}
+										animate={{ opacity: 1, scale: 1 }}
+										style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+									>
+										<CheckCheck size={14} /> All read
+									</motion.span>
+								) : (
+									"Mark all as read"
+								)}
+							</motion.button>
 						</div>
 					</div>
 					{items.length === 0 && (
-						<p className="quiet" style={{ padding: 20 }}>
-							No notifications yet.
-						</p>
+						<div className="notification-empty">
+							<BellOff aria-hidden="true" />
+							<p className="quiet" style={{ margin: 0 }}>
+								No notifications yet.
+							</p>
+						</div>
 					)}
-					{items.map((n) => {
-						const Icon = iconFor(n);
-						return (
-							<button
-								className={`notification-row ${!n.readAt ? "unread" : ""}`}
-								onClick={() => openNotification(n)}
-								key={n.id}
-							>
-								<span className="tiny-icon coral">
-									<Icon />
-								</span>
-								<span>
-									<strong>{n.title}</strong>
-									<small>{n.body}</small>
-								</span>
-								{n.data?.kind === "announcement" && (
-									<AnnouncementRowExtra n={n} />
-								)}
-								<time>{timeAgo(n.createdAt)}</time>
-								{!n.readAt && <i />}
-							</button>
-						);
-					})}
-				</section>
+					<motion.div variants={staggerContainer} initial="hidden" animate="visible">
+						<AnimatePresence initial={false}>
+							{items.map((n) => {
+								const Icon = iconFor(n);
+								return (
+									<motion.button
+										className={`notification-row ${!n.readAt ? "unread" : ""}`}
+										onClick={() => openNotification(n)}
+										key={n.id}
+										layout
+										variants={staggerItem}
+										initial="hidden"
+										animate="visible"
+										exit={{ opacity: 0, height: 0 }}
+									>
+										<span className="tiny-icon coral">
+											<Icon />
+										</span>
+										<span>
+											<strong>{n.title}</strong>
+											<small>{n.body}</small>
+										</span>
+										{n.data?.kind === "announcement" && (
+											<AnnouncementRowExtra n={n} />
+										)}
+										<time>{timeAgo(n.createdAt)}</time>
+										{!n.readAt && <i />}
+									</motion.button>
+								);
+							})}
+						</AnimatePresence>
+					</motion.div>
+				</motion.section>
 			</div>
 		</AppShell>
 	);

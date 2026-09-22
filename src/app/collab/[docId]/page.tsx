@@ -7,6 +7,7 @@ import { ApiError } from "@/lib/api-client";
 import * as documentsApi from "@/lib/api/documents.api";
 import { useAuth } from "@/lib/auth-context";
 import { isManager } from "@/lib/roles";
+import { EASE_OUT, dialogBackdrop, dialogPanel, staggerContainer, staggerItem, tapScale } from "@/lib/motion";
 import type { DocumentCollaborator, DocumentRecord, DocumentVersionFull, DocumentVersionSummary, DocumentVisibility, User } from "@/lib/types";
 import { bytesToBase64, useDocumentSync } from "@/lib/yjs-ws-binding";
 import Collaboration from "@tiptap/extension-collaboration";
@@ -14,6 +15,7 @@ import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Bold,
   Check,
@@ -251,6 +253,7 @@ function DocumentWorkspace({ docId }: { docId: string }) {
   }
 
   const presenceEntries = useMemo(() => Array.from(sync.presence.entries()), [sync.presence]);
+  const prefersReducedMotion = useReducedMotion();
 
   if (notFound) {
     return (
@@ -285,16 +288,25 @@ function DocumentWorkspace({ docId }: { docId: string }) {
             <button className="plain small" disabled={downloading} onClick={() => setDownloadOpen((open) => !open)}>
               <Download size={14} /> {downloading ? "Preparing…" : "Download"} <ChevronDown size={12} />
             </button>
-            {downloadOpen && (
-              <div className="download-menu" role="menu">
-                <button role="menuitem" onClick={onDownloadPdf}>
-                  <FileText size={14} /> Download as PDF
-                </button>
-                <button role="menuitem" onClick={onDownloadDocx}>
-                  <FileDown size={14} /> Download as Word (.docx)
-                </button>
-              </div>
-            )}
+            <AnimatePresence>
+              {downloadOpen && (
+                <motion.div
+                  className="download-menu"
+                  role="menu"
+                  initial={{ opacity: 0, scale: 0.94, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96, y: -2, transition: { duration: 0.12 } }}
+                  transition={{ duration: 0.18, ease: EASE_OUT }}
+                >
+                  <button role="menuitem" onClick={onDownloadPdf}>
+                    <FileText size={14} /> Download as PDF
+                  </button>
+                  <button role="menuitem" onClick={onDownloadDocx}>
+                    <FileDown size={14} /> Download as Word (.docx)
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           {canManage && (
             <button className="primary small" onClick={() => setShareOpen(true)}>
@@ -324,108 +336,170 @@ function DocumentWorkspace({ docId }: { docId: string }) {
               disabled={!canManage && !canEdit}
               aria-label="Document title"
             />
-            <small>
-              <i /> {titleSaved ? "Saved" : "Saving…"}
+            <small style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}>
+              <i /> <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={titleSaved ? "saved" : "saving"}
+                  initial={{ opacity: 0, y: -2 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 2 }}
+                  transition={{ duration: 0.18, ease: EASE_OUT }}
+                  style={{ display: "inline-block" }}
+                >
+                  {titleSaved ? "Saved" : "Saving…"}
+                </motion.span>
+              </AnimatePresence>
               {" · "}
-              <span className={`priority-badge ${doc.visibility === "public" ? "medium" : "low"}`} style={{ marginLeft: 4 }}>
-                {doc.visibility === "public" ? <Globe2 size={10} /> : <Lock size={10} />}{" "}
-                {doc.visibility === "public" ? "Public" : "Private"}
-              </span>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={doc.visibility}
+                  className={`priority-badge ${doc.visibility === "public" ? "medium" : "low"}`}
+                  style={{ marginLeft: 4 }}
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.85 }}
+                  transition={{ duration: 0.2, ease: EASE_OUT }}
+                >
+                  {doc.visibility === "public" ? <Globe2 size={10} /> : <Lock size={10} />}{" "}
+                  {doc.visibility === "public" ? "Public" : "Private"}
+                </motion.span>
+              </AnimatePresence>
             </small>
           </div>
           <div className="editor-people">
-            {presenceEntries.slice(0, 4).map(([id, name]) => (
-              <Avatar key={id} initials={initialsOf(name)} color={colorFor(id)} size="sm" />
-            ))}
+            <AnimatePresence initial={false}>
+              {presenceEntries.slice(0, 4).map(([id, name], index) =>
+                prefersReducedMotion ? (
+                  <Avatar key={id} initials={initialsOf(name)} color={colorFor(id)} size="sm" />
+                ) : (
+                  <motion.div
+                    key={id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.6, x: 8 }}
+                    animate={{ opacity: 1, scale: 1, x: 0, transition: { duration: 0.28, ease: EASE_OUT, delay: index * 0.04 } }}
+                    exit={{ opacity: 0, scale: 0.6, transition: { duration: 0.15 } }}
+                    style={{ display: "inline-flex" }}
+                  >
+                    <Avatar initials={initialsOf(name)} color={colorFor(id)} size="sm" />
+                  </motion.div>
+                ),
+              )}
+            </AnimatePresence>
             {presenceEntries.length > 4 && <span>+{presenceEntries.length - 4}</span>}
           </div>
         </div>
         {canEdit && (
           <div className="toolbar">
-            <button aria-label="Undo" onClick={() => editor.chain().focus().undo().run()}>
+            <motion.button aria-label="Undo" whileTap={tapScale} onClick={() => editor.chain().focus().undo().run()}>
               <Undo />
-            </button>
-            <button aria-label="Redo" onClick={() => editor.chain().focus().redo().run()}>
+            </motion.button>
+            <motion.button aria-label="Redo" whileTap={tapScale} onClick={() => editor.chain().focus().redo().run()}>
               <Redo />
-            </button>
+            </motion.button>
             <i />
-            <button
+            <motion.button
               aria-label="Bold"
               aria-pressed={toolbarState?.bold}
               className={toolbarState?.bold ? "is-active" : ""}
+              whileTap={tapScale}
               onClick={() => editor.chain().focus().toggleBold().run()}
             >
               <Bold />
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               aria-label="Italic"
               aria-pressed={toolbarState?.italic}
               className={toolbarState?.italic ? "is-active" : ""}
+              whileTap={tapScale}
               onClick={() => editor.chain().focus().toggleItalic().run()}
             >
               <Italic />
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               aria-label="Bullet list"
               aria-pressed={toolbarState?.bulletList}
               className={toolbarState?.bulletList ? "is-active" : ""}
+              whileTap={tapScale}
               onClick={() => editor.chain().focus().toggleBulletList().run()}
             >
               <List />
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               aria-label="Ordered list"
               aria-pressed={toolbarState?.orderedList}
               className={toolbarState?.orderedList ? "is-active" : ""}
+              whileTap={tapScale}
               onClick={() => editor.chain().focus().toggleOrderedList().run()}
             >
               <ListOrdered />
-            </button>
+            </motion.button>
           </div>
         )}
         <EditorContent editor={editor} className="document" ref={editorContentRef} />
       </div>
 
-      {shareOpen && (
-        <ShareDialog
-          doc={doc}
-          canManage={canManage}
-          onClose={() => setShareOpen(false)}
-          onUpdated={setDoc}
-        />
-      )}
+      <AnimatePresence>
+        {shareOpen && (
+          <ShareDialog
+            doc={doc}
+            canManage={canManage}
+            onClose={() => setShareOpen(false)}
+            onUpdated={setDoc}
+          />
+        )}
+      </AnimatePresence>
 
-      {historyOpen && (
-        <HistoryDialog
-          docId={docId}
-          canRestore={canManage}
-          onClose={() => setHistoryOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {historyOpen && (
+          <HistoryDialog
+            docId={docId}
+            canRestore={canManage}
+            onClose={() => setHistoryOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
-      {deleteOpen && (
-        <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !deleting) setDeleteOpen(false); }}>
-          <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-document-title">
-            <header>
-              <div>
-                <h2 id="delete-document-title">Delete document?</h2>
-                <p>&ldquo;{title || "Untitled document"}&rdquo; and all of its history will be permanently deleted. This cannot be undone.</p>
+      <AnimatePresence>
+        {deleteOpen && (
+          <motion.div
+            className="share-backdrop"
+            variants={dialogBackdrop}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onMouseDown={(event) => { if (event.target === event.currentTarget && !deleting) setDeleteOpen(false); }}
+          >
+            <motion.section
+              className="share-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-document-title"
+              variants={dialogPanel}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <header>
+                <div>
+                  <h2 id="delete-document-title">Delete document?</h2>
+                  <p>&ldquo;{title || "Untitled document"}&rdquo; and all of its history will be permanently deleted. This cannot be undone.</p>
+                </div>
+                <button onClick={() => setDeleteOpen(false)} aria-label="Close delete confirmation" disabled={deleting}>
+                  <X size={18} />
+                </button>
+              </header>
+              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                <button className="plain wide" onClick={() => setDeleteOpen(false)} disabled={deleting}>
+                  Cancel
+                </button>
+                <button className="danger wide" onClick={onDelete} disabled={deleting}>
+                  {deleting ? "Deleting…" : "Delete"}
+                </button>
               </div>
-              <button onClick={() => setDeleteOpen(false)} aria-label="Close delete confirmation" disabled={deleting}>
-                <X size={18} />
-              </button>
-            </header>
-            <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-              <button className="plain wide" onClick={() => setDeleteOpen(false)} disabled={deleting}>
-                Cancel
-              </button>
-              <button className="danger wide" onClick={onDelete} disabled={deleting}>
-                {deleting ? "Deleting…" : "Delete"}
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AppShell>
   );
 }
@@ -522,8 +596,24 @@ function ShareDialog({
   }
 
   return (
-    <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="doc-share-title">
+    <motion.div
+      className="share-backdrop"
+      variants={dialogBackdrop}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+      <motion.section
+        className="share-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="doc-share-title"
+        variants={dialogPanel}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <header>
           <div>
             <h2 id="doc-share-title">Share document</h2>
@@ -541,24 +631,26 @@ function ShareDialog({
         <div style={{ marginBottom: 16 }}>
           <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 7 }}>Visibility</span>
           <div style={{ display: "flex", gap: 8 }}>
-            <button
+            <motion.button
               type="button"
               className={doc.visibility === "private" ? "primary small" : "plain small"}
               disabled={!canManage || visibilityPending}
               onClick={() => onVisibilityChange("private")}
               aria-pressed={doc.visibility === "private"}
+              whileTap={tapScale}
             >
               <Lock size={14} /> Private
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
               className={doc.visibility === "public" ? "primary small" : "plain small"}
               disabled={!canManage || visibilityPending}
               onClick={() => onVisibilityChange("public")}
               aria-pressed={doc.visibility === "public"}
+              whileTap={tapScale}
             >
               <Globe2 size={14} /> Public
-            </button>
+            </motion.button>
           </div>
           {!canManage && <p className="quiet" style={{ marginTop: 6 }}>Only the owner or a manager can change visibility.</p>}
         </div>
@@ -579,27 +671,37 @@ function ShareDialog({
 
         <div style={{ marginTop: 16 }}>
           {doc.collaborators.length === 0 && <p className="quiet">No collaborators yet — just you.</p>}
-          {doc.collaborators.map((c) => (
-            <div className="activity-row" key={c.userId}>
-              <Avatar initials={initialsOf(c.displayName)} color={colorFor(c.userId)} size="sm" />
-              <div>
-                <strong>{c.displayName}</strong>
-                <small>{c.email}</small>
-              </div>
-              <select
-                className="role-select"
-                value={c.role}
-                disabled={pendingId === c.userId}
-                onChange={(e) => onRoleChange(c.userId, e.target.value as "editor" | "viewer")}
+          <AnimatePresence initial={false}>
+            {doc.collaborators.map((c) => (
+              <motion.div
+                className="activity-row"
+                key={c.userId}
+                layout
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: 12, transition: { duration: 0.15 } }}
+                transition={{ duration: 0.24, ease: EASE_OUT }}
               >
-                <option value="editor">Editor</option>
-                <option value="viewer">Viewer</option>
-              </select>
-              <button className="danger small" disabled={pendingId === c.userId} onClick={() => onRemove(c.userId)}>
-                Remove
-              </button>
-            </div>
-          ))}
+                <Avatar initials={initialsOf(c.displayName)} color={colorFor(c.userId)} size="sm" />
+                <div>
+                  <strong>{c.displayName}</strong>
+                  <small>{c.email}</small>
+                </div>
+                <select
+                  className="role-select"
+                  value={c.role}
+                  disabled={pendingId === c.userId}
+                  onChange={(e) => onRoleChange(c.userId, e.target.value as "editor" | "viewer")}
+                >
+                  <option value="editor">Editor</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+                <button className="danger small" disabled={pendingId === c.userId} onClick={() => onRemove(c.userId)}>
+                  Remove
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
 
         <div style={{ marginTop: 16 }}>
@@ -610,8 +712,8 @@ function ShareDialog({
             </div>
           </label>
         </div>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }
 
@@ -628,6 +730,7 @@ function HistoryDialog({
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<DocumentVersionFull | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [restoredId, setRestoredId] = useState<string | null>(null);
 
   useEffect(() => {
     documentsApi
@@ -652,9 +755,16 @@ function HistoryDialog({
     setError(null);
     try {
       await documentsApi.restoreVersion(docId, versionId);
-      // The resulting document:restored WS event is what actually resets the live editor.
-      setPreview(null);
-      onClose();
+      // The resulting document:restored WS event is what actually resets the live editor. Show a
+      // brief confirming state before closing so the restore reads as a deliberate action, not an
+      // instant snap.
+      setRestoredId(versionId);
+      setPendingId(null);
+      setTimeout(() => {
+        setPreview(null);
+        onClose();
+      }, 550);
+      return;
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not restore that version.");
     } finally {
@@ -663,8 +773,24 @@ function HistoryDialog({
   }
 
   return (
-    <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="doc-history-title">
+    <motion.div
+      className="share-backdrop"
+      variants={dialogBackdrop}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+      <motion.section
+        className="share-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="doc-history-title"
+        variants={dialogPanel}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <header>
           <div>
             <h2 id="doc-history-title">Version history</h2>
@@ -688,17 +814,25 @@ function HistoryDialog({
             </button>
             <div className="version-preview" dangerouslySetInnerHTML={{ __html: preview.html }} />
             {canRestore && (
-              <button className="primary wide" style={{ marginTop: 12 }} disabled={pendingId === preview.id} onClick={() => onRestore(preview.id)}>
-                Restore this version
-              </button>
+              <motion.button
+                className="primary wide"
+                style={{ marginTop: 12 }}
+                disabled={pendingId === preview.id || restoredId === preview.id}
+                onClick={() => onRestore(preview.id)}
+                whileTap={tapScale}
+                animate={restoredId === preview.id ? { scale: [1, 1.03, 1] } : {}}
+                transition={{ duration: 0.3, ease: EASE_OUT }}
+              >
+                {restoredId === preview.id ? <><Check size={14} /> Restored</> : "Restore this version"}
+              </motion.button>
             )}
           </div>
         ) : (
-          <div style={{ marginTop: 8 }}>
+          <motion.div style={{ marginTop: 8 }} variants={staggerContainer} initial="hidden" animate="visible">
             {versions === null && <p className="quiet">Loading…</p>}
             {versions?.length === 0 && <p className="quiet">No saved versions yet.</p>}
             {versions?.map((v) => (
-              <div className="activity-row" key={v.id}>
+              <motion.div className="activity-row" key={v.id} variants={staggerItem}>
                 <Avatar initials={initialsOf(v.author.displayName)} color={colorFor(v.authorId)} size="sm" />
                 <div>
                   <strong>{v.title || "Untitled document"}</strong>
@@ -710,15 +844,22 @@ function HistoryDialog({
                   Preview
                 </button>
                 {canRestore && (
-                  <button className="danger small" disabled={pendingId === v.id} onClick={() => onRestore(v.id)}>
-                    Restore
-                  </button>
+                  <motion.button
+                    className="danger small"
+                    disabled={pendingId === v.id || restoredId === v.id}
+                    onClick={() => onRestore(v.id)}
+                    whileTap={tapScale}
+                    animate={restoredId === v.id ? { scale: [1, 1.06, 1] } : {}}
+                    transition={{ duration: 0.3, ease: EASE_OUT }}
+                  >
+                    {restoredId === v.id ? <><Check size={12} /> Restored</> : "Restore"}
+                  </motion.button>
                 )}
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }

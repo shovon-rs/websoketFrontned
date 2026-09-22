@@ -1,10 +1,14 @@
 "use client";
 
+import { AuthErrorMessage } from "@/components/AuthErrorMessage";
 import { PasswordField } from "@/components/PasswordField";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
+import { fadeIn, fadeInUp, tapScale } from "@/lib/motion";
 import { strongPasswordError } from "@/lib/password";
-import { Zap } from "lucide-react";
+import { motion } from "framer-motion";
+import { Loader2, Zap } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -14,6 +18,7 @@ export default function Register() {
 	const { register } = useAuth();
 	const [error, setError] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
+	const [password, setPassword] = useState("");
 
 	async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault();
@@ -49,7 +54,7 @@ export default function Register() {
 
 	return (
 		<main className="auth">
-			<section className="auth-art">
+			<motion.section className="auth-art" variants={fadeIn} initial="hidden" animate="visible">
 				<Link className="brand light" href="/">
 					<span className="brand-mark">
 						<Zap fill="currentColor" />
@@ -65,9 +70,9 @@ export default function Register() {
 					</p>
 				</div>
 				<small>© 2026 Relay, Inc.</small>
-			</section>
+			</motion.section>
 			<section className="auth-form">
-				<form onSubmit={onSubmit}>
+				<motion.form onSubmit={onSubmit} variants={fadeInUp} initial="hidden" animate="visible">
 					<h2>Create your account</h2>
 					<p>Set up your Relay workspace in a minute.</p>
 					<label>
@@ -96,7 +101,9 @@ export default function Register() {
 							minLength={8}
 							autoComplete="new-password"
 							required
+							onChange={setPassword}
 						/>
+						<PasswordStrengthMeter password={password} />
 						<small>
 							Must be 8+ characters with an uppercase letter, a lowercase
 							letter, a number, and a special character.
@@ -112,14 +119,15 @@ export default function Register() {
 							required
 						/>
 					</label>
-					{error && <p className="auth-error" role="alert">{error}</p>}
-					<button className="primary wide" disabled={submitting}>
+					<AuthErrorMessage message={error} />
+					<motion.button className="primary wide" disabled={submitting} whileTap={tapScale}>
+						{submitting && <Loader2 size={16} className="spin btn-spinner" />}
 						{submitting ? "Creating account…" : "Create account"}
-					</button>
+					</motion.button>
 					<small>
 						Already have an account? <Link href="/login">Sign in</Link>
 					</small>
-				</form>
+				</motion.form>
 			</section>
 		</main>
 	);

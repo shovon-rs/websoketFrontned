@@ -3,8 +3,10 @@ import { ApiError } from "@/lib/api-client";
 import * as trackingApi from "@/lib/api/tracking.api";
 import { TrackingMap, TrackingMapMarker } from "@/components/TrackingMap";
 import { Avatar } from "@/components/Avatar";
+import { fadeInUp, staggerContainer, staggerItem } from "@/lib/motion";
 import { useWs } from "@/lib/ws-context";
 import type { User } from "@/lib/types";
+import { AnimatePresence, motion } from "framer-motion";
 import { MapPin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -114,14 +116,14 @@ export function AdminLiveLocationsTab() {
 
   return (
     <div className="admin-locations">
-      <div className="admin-locations-head">
+      <motion.div className="admin-locations-head" variants={fadeInUp} initial="hidden" animate="visible">
         <div>
           <span className="eyebrow">Super admin</span>
           <h2>Live locations</h2>
           <p className="quiet">Every user currently sharing their location, updated in real time.</p>
         </div>
         <span className="live-pill"><i className={markers.length > 0 ? "" : "dim"} /> {markers.length} of {list.length} live</span>
-      </div>
+      </motion.div>
 
       {error && <p className="auth-error" role="alert">{error}</p>}
 
@@ -154,25 +156,30 @@ export function AdminLiveLocationsTab() {
             )}
 
             {!loading && list.length > 0 && (
-              <div className="admin-locations-rows">
-                {list.map((s) => {
-                  const hasPosition = !!positions[s.sessionId];
-                  const isSelected = focusId === s.sessionId;
-                  return (
-                    <button
-                      className={`activity-row selectable${isSelected ? " selected" : ""}`}
-                      key={s.sessionId}
-                      onClick={() => setFocusId(s.sessionId)}
-                    >
-                      <Avatar initials={s.user.displayName.slice(0, 2).toUpperCase()} color="blue" online={hasPosition} size="sm" />
-                      <div>
-                        <strong>{s.user.displayName}</strong>
-                        <small>{hasPosition ? "Live" : "Waiting for location…"}</small>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              <motion.div className="admin-locations-rows" variants={staggerContainer} initial="hidden" animate="visible">
+                <AnimatePresence initial={false}>
+                  {list.map((s) => {
+                    const hasPosition = !!positions[s.sessionId];
+                    const isSelected = focusId === s.sessionId;
+                    return (
+                      <motion.button
+                        className={`activity-row selectable${isSelected ? " selected" : ""}`}
+                        key={s.sessionId}
+                        layout
+                        variants={staggerItem}
+                        exit={{ opacity: 0, x: 12, transition: { duration: 0.15 } }}
+                        onClick={() => setFocusId(s.sessionId)}
+                      >
+                        <Avatar initials={s.user.displayName.slice(0, 2).toUpperCase()} color="blue" online={hasPosition} size="sm" />
+                        <div>
+                          <strong>{s.user.displayName}</strong>
+                          <small>{hasPosition ? "Live" : "Waiting for location…"}</small>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </AnimatePresence>
+              </motion.div>
             )}
           </section>
         </aside>

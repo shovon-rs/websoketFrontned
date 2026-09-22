@@ -3,6 +3,8 @@ import { Avatar } from "@/components/Avatar";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ApiError } from "@/lib/api-client";
 import * as chatApi from "@/lib/api/chat.api";
+import { dialogBackdrop, dialogPanel } from "@/lib/motion";
+import { motion } from "framer-motion";
 import type { Conversation, User } from "@/lib/types";
 import { LogOut, X } from "lucide-react";
 import { useState } from "react";
@@ -102,8 +104,24 @@ export function GroupInfoDialog({
   }
 
   return (
-    <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="group-info-title">
+    <motion.div
+      className="share-backdrop"
+      variants={dialogBackdrop}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+      <motion.section
+        className="share-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="group-info-title"
+        variants={dialogPanel}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <header>
           <div>
             <h2 id="group-info-title">Group info</h2>
@@ -201,7 +219,7 @@ export function GroupInfoDialog({
         >
           <LogOut size={14} /> Leave group
         </button>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }

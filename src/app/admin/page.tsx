@@ -1,7 +1,9 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
+import { fadeIn } from "@/lib/motion";
 import { isAdmin, isSuperAdmin } from "@/lib/roles";
+import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { AdminUsersTab } from "./AdminUsersTab";
@@ -64,10 +66,14 @@ function AdminPageContent() {
             </button>
           )}
         </div>
-        {tab === "users" && <AdminUsersTab actingRole={actingRole} currentUserId={user.id} />}
-        {tab === "announcements" && canManageAnnouncements && <AdminAnnouncementsTab />}
-        {tab === "live-requests" && canManageAnnouncements && <AdminLiveRequestsTab />}
-        {tab === "live-locations" && canManageAnnouncements && <AdminLiveLocationsTab />}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={tab} variants={fadeIn} initial="hidden" animate="visible" exit={{ opacity: 0, transition: { duration: 0.12 } }}>
+            {tab === "users" && <AdminUsersTab actingRole={actingRole} currentUserId={user.id} />}
+            {tab === "announcements" && canManageAnnouncements && <AdminAnnouncementsTab />}
+            {tab === "live-requests" && canManageAnnouncements && <AdminLiveRequestsTab />}
+            {tab === "live-locations" && canManageAnnouncements && <AdminLiveLocationsTab />}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </AppShell>
   );

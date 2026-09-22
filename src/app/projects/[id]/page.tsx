@@ -8,10 +8,12 @@ import { ApiError } from "@/lib/api-client";
 import * as projectsApi from "@/lib/api/projects.api";
 import * as tasksApi from "@/lib/api/tasks.api";
 import { useAuth } from "@/lib/auth-context";
+import { dialogBackdrop, dialogPanel, staggerContainer, staggerItem } from "@/lib/motion";
 import { isManager } from "@/lib/roles";
 import { formatDueDate } from "@/lib/time";
 import type { Project, ProjectRole, Task, TaskPriority, User } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
+import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Trash2, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -47,6 +49,7 @@ export default function ProjectBoardPage({ params }: { params: { id: string } })
   const [addingSection, setAddingSection] = useState(false);
   const [newTaskSection, setNewTaskSection] = useState<string | null>(null);
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
 
   const loadProject = useCallback(() => {
     projectsApi
@@ -113,6 +116,7 @@ export default function ProjectBoardPage({ params }: { params: { id: string } })
     );
     setTasks(optimistic);
     setDragTaskId(null);
+    setDragOverSectionId(null);
 
     try {
       const updated = await tasksApi.updateTaskOrder(taskId, { sectionId: destSectionId, order: newOrder });
@@ -162,7 +166,7 @@ export default function ProjectBoardPage({ params }: { params: { id: string } })
   if (!project || !tasks) {
     return (
       <AppShell title="Project">
-        <PageShimmer />
+        <PageShimmer variant="board" />
       </AppShell>
     );
   }
@@ -183,19 +187,28 @@ export default function ProjectBoardPage({ params }: { params: { id: string } })
             {error}
           </p>
         )}
-        <div className="board">
+        <motion.div className="board" variants={staggerContainer} initial="hidden" animate="visible">
           {project.sections
             .slice()
             .sort((a, b) => a.order - b.order)
             .map((section) => {
               const sectionTasks = tasksBySection.get(section.id) ?? [];
               return (
-                <div
-                  className="board-column"
+                <motion.div
+                  className={`board-column${dragOverSectionId === section.id ? " drag-over" : ""}`}
                   key={section.id}
+                  variants={staggerItem}
                   onDragOver={(e) => e.preventDefault()}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    if (dragTaskId) setDragOverSectionId(section.id);
+                  }}
+                  onDragLeave={(e) => {
+                    if (e.currentTarget === e.target) setDragOverSectionId(null);
+                  }}
                   onDrop={(e) => {
                     e.preventDefault();
+                    setDragOverSectionId(null);
                     if (dragTaskId) moveTask(dragTaskId, section.id, sectionTasks.length);
                   }}
                 >
@@ -213,46 +226,57 @@ export default function ProjectBoardPage({ params }: { params: { id: string } })
                     )}
                   </div>
 
-                  <div className="board-column-body">
-                    {sectionTasks.map((task, index) => (
-                      <div
-                        className="board-card"
-                        key={task.id}
-                        draggable
-                        onDragStart={() => setDragTaskId(task.id)}
-                        onDragEnd={() => setDragTaskId(null)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (dragTaskId) moveTask(dragTaskId, section.id, index);
-                        }}
-                      >
-                        <Link href={`/tasks/${task.id}`} className="board-card-link">
-                          <strong>{task.title}</strong>
-                        </Link>
-                        <div className="board-card-meta">
-                          <span className={`priority-badge ${task.priority}`}>{PRIORITY_LABEL[task.priority]}</span>
-                          {task.dueDate && <span className="quiet">{formatDueDate(task.dueDate)}</span>}
-                        </div>
-                        {task.assignees.length > 0 && (
-                          <div className="board-card-avatars">
-                            {task.assignees.slice(0, 4).map((a) => (
-                              <Avatar key={a.id} initials={initialsOf(a.displayName)} color={colorFor(a.id)} size="sm" />
-                            ))}
-                            {task.assignees.length > 4 && (
-                              <span className="avatar-more">+{task.assignees.length - 4}</span>
-                            )}
+                  <motion.div className="board-column-body" variants={staggerContainer} initial="hidden" animate="visible">
+                    <AnimatePresence initial={false}>
+                      {sectionTasks.map((task, index) => (
+                        <motion.div
+                          className={`board-card${dragTaskId === task.id ? " dragging" : ""}`}
+                          key={task.id}
+                          layout
+                          layoutId={task.id}
+                          variants={staggerItem}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          transition={{ layout: { duration: 0.28, ease: [0.16, 1, 0.3, 1] } }}
+                          draggable
+                          onDragStart={() => setDragTaskId(task.id)}
+                          onDragEnd={() => {
+                            setDragTaskId(null);
+                            setDragOverSectionId(null);
+                          }}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDragOverSectionId(null);
+                            if (dragTaskId) moveTask(dragTaskId, section.id, index);
+                          }}
+                        >
+                          <Link href={`/tasks/${task.id}`} className="board-card-link">
+                            <strong>{task.title}</strong>
+                          </Link>
+                          <div className="board-card-meta">
+                            <span className={`priority-badge ${task.priority}`}>{PRIORITY_LABEL[task.priority]}</span>
+                            {task.dueDate && <span className="quiet">{formatDueDate(task.dueDate)}</span>}
                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                          {task.assignees.length > 0 && (
+                            <div className="board-card-avatars">
+                              {task.assignees.slice(0, 4).map((a) => (
+                                <Avatar key={a.id} initials={initialsOf(a.displayName)} color={colorFor(a.id)} size="sm" />
+                              ))}
+                              {task.assignees.length > 4 && (
+                                <span className="avatar-more">+{task.assignees.length - 4}</span>
+                              )}
+                            </div>
+                          )}
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </motion.div>
 
                   <button className="plain board-add-task" onClick={() => setNewTaskSection(section.id)}>
                     <Plus size={14} /> New task
                   </button>
-                </div>
+                </motion.div>
               );
             })}
 
@@ -284,29 +308,33 @@ export default function ProjectBoardPage({ params }: { params: { id: string } })
               )}
             </div>
           )}
-        </div>
+        </motion.div>
       </div>
 
-      {membersOpen && (
-        <ManageMembersDialog
-          project={project}
-          canManage={canManage}
-          onClose={() => setMembersOpen(false)}
-          onUpdated={setProject}
-        />
-      )}
+      <AnimatePresence>
+        {membersOpen && (
+          <ManageMembersDialog
+            project={project}
+            canManage={canManage}
+            onClose={() => setMembersOpen(false)}
+            onUpdated={setProject}
+          />
+        )}
+      </AnimatePresence>
 
-      {newTaskSection && (
-        <CreateBoardTaskDialog
-          projectId={project.id}
-          sectionId={newTaskSection}
-          onClose={() => setNewTaskSection(null)}
-          onCreated={(task) => {
-            setTasks((prev) => (prev ? [...prev, task] : prev));
-            setNewTaskSection(null);
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {newTaskSection && (
+          <CreateBoardTaskDialog
+            projectId={project.id}
+            sectionId={newTaskSection}
+            onClose={() => setNewTaskSection(null)}
+            onCreated={(task) => {
+              setTasks((prev) => (prev ? [...prev, task] : prev));
+              setNewTaskSection(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </AppShell>
   );
 }
@@ -372,8 +400,24 @@ function ManageMembersDialog({
   }
 
   return (
-    <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="project-members-title">
+    <motion.div
+      className="share-backdrop"
+      variants={dialogBackdrop}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+      <motion.section
+        className="share-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="project-members-title"
+        variants={dialogPanel}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <header>
           <div>
             <h2 id="project-members-title">Project members</h2>
@@ -430,8 +474,8 @@ function ManageMembersDialog({
             </label>
           </div>
         )}
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }
 
@@ -485,8 +529,24 @@ function CreateBoardTaskDialog({
   }
 
   return (
-    <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="create-board-task-title">
+    <motion.div
+      className="share-backdrop"
+      variants={dialogBackdrop}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+      <motion.section
+        className="share-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-board-task-title"
+        variants={dialogPanel}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <header>
           <div>
             <h2 id="create-board-task-title">New task</h2>
@@ -533,7 +593,7 @@ function CreateBoardTaskDialog({
             {submitting ? "Creating…" : "Create task"}
           </button>
         </form>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }

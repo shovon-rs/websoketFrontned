@@ -1,9 +1,11 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Phone, PhoneOff, Video } from "lucide-react";
 import { useWs } from "@/lib/ws-context";
 import { startRingtone } from "@/lib/sound";
+import { tapScale, EASE_SPRING } from "@/lib/motion";
 
 interface IncomingCall {
   callId: string;
@@ -35,8 +37,6 @@ export function IncomingCallBanner() {
     };
   }, [incoming?.callId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!incoming) return null;
-
   function accept() {
     if (!incoming) return;
     send("call:accept", { callId: incoming.callId });
@@ -50,10 +50,23 @@ export function IncomingCallBanner() {
     setIncoming(null);
   }
 
-  return <div className="incoming-call">
-    <span className="incoming-call-icon">{incoming.callType === "video" ? <Video size={18}/> : <Phone size={18}/>}</span>
-    <div><strong>Incoming {incoming.callType} call</strong><small>Someone is calling you</small></div>
-    <button className="incoming-call-accept" onClick={accept}><Phone size={16}/></button>
-    <button className="incoming-call-reject" onClick={reject}><PhoneOff size={16}/></button>
-  </div>;
+  return (
+    <AnimatePresence>
+      {incoming && (
+        <motion.div
+          className="incoming-call"
+          role="alert"
+          initial={{ opacity: 0, x: 40, scale: 0.95 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          exit={{ opacity: 0, x: 40, scale: 0.95, transition: { duration: 0.15 } }}
+          transition={{ duration: 0.35, ease: EASE_SPRING }}
+        >
+          <span className="incoming-call-icon">{incoming.callType === "video" ? <Video size={18}/> : <Phone size={18}/>}</span>
+          <div><strong>Incoming {incoming.callType} call</strong><small>Someone is calling you</small></div>
+          <motion.button className="incoming-call-accept" onClick={accept} whileTap={tapScale} aria-label="Accept call"><Phone size={16}/></motion.button>
+          <motion.button className="incoming-call-reject" onClick={reject} whileTap={tapScale} aria-label="Decline call"><PhoneOff size={16}/></motion.button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }

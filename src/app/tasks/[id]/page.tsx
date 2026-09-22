@@ -1,14 +1,17 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
+import { Avatar } from "@/components/Avatar";
 import { PageShimmer } from "@/components/Shimmer";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ApiError } from "@/lib/api-client";
 import * as tasksApi from "@/lib/api/tasks.api";
 import { useAuth } from "@/lib/auth-context";
+import { dialogBackdrop, dialogPanel, staggerContainer, staggerItem } from "@/lib/motion";
 import { isManager } from "@/lib/roles";
 import { formatDueDate, toDateTimeLocalValue } from "@/lib/time";
 import type { Task, TaskPriority, TaskStatus, User } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
+import { AnimatePresence, motion } from "framer-motion";
 import { FileText, Paperclip, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -27,6 +30,17 @@ const PRIORITY_LABEL: Record<TaskPriority, string> = {
 };
 
 const TASK_NOTIFICATION_KINDS = new Set(["task:assigned", "task:status-changed", "task:comment-new"]);
+
+const AVATAR_PALETTE = ["coral", "blue", "violet", "gold", "green"];
+function colorFor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+}
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
 
 export default function TaskDetail({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -143,7 +157,7 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
   if (!task) {
     return (
       <AppShell title="Task">
-        <PageShimmer />
+        <PageShimmer variant="detail" />
       </AppShell>
     );
   }
@@ -176,12 +190,38 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
 
           <div className="task-meta">
             <span>
-              Assigned to{" "}
-              <strong>{task.assignees.map((a) => a.displayName).join(", ")}</strong>
+              Assigned to <strong>{task.assignees.map((a) => a.displayName).join(", ")}</strong>
+              {task.assignees.length > 0 && (
+                <motion.span
+                  className="task-assignee-row"
+                  style={{ marginLeft: 8 }}
+                  variants={staggerContainer}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {task.assignees.slice(0, 6).map((a) => (
+                    <motion.span key={a.id} variants={staggerItem} style={{ display: "inline-flex" }}>
+                      <Avatar initials={initialsOf(a.displayName)} color={colorFor(a.id)} size="sm" />
+                    </motion.span>
+                  ))}
+                </motion.span>
+              )}
             </span>
             {task.priority && (
               <span>
-                Priority <strong className={`priority-badge ${task.priority}`}>{PRIORITY_LABEL[task.priority]}</strong>
+                Priority{" "}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.strong
+                    key={task.priority}
+                    className={`priority-badge ${task.priority}`}
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.85 }}
+                    transition={{ duration: 0.18 }}
+                  >
+                    {PRIORITY_LABEL[task.priority]}
+                  </motion.strong>
+                </AnimatePresence>
               </span>
             )}
             {task.dueDate && (
@@ -191,6 +231,20 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
             )}
             <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
               Status
+              <span className="task-status-swap">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={task.status}
+                    className={`task-status ${task.status}`}
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 4 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {STATUS_LABEL[task.status]}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
               <select
                 className="role-select"
                 value={task.status}
@@ -232,20 +286,30 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
             </p>
           )}
           {task.attachments.length === 0 && <p className="quiet">No attachments yet.</p>}
-          {task.attachments.map((a) => (
-            <div className="task-attachment-row" key={a.id}>
-              <FileText size={18} />
-              <a href={a.url} target="_blank" rel="noreferrer">
-                <strong>{a.fileName}</strong>
-                <small>{Math.ceil(a.size / 1024)} KB</small>
-              </a>
-              {canManage && (
-                <button onClick={() => onDeleteAttachment(a.id)} aria-label={`Remove ${a.fileName}`}>
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          ))}
+          <AnimatePresence initial={false}>
+            {task.attachments.map((a) => (
+              <motion.div
+                className="task-attachment-row"
+                key={a.id}
+                layout
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -8, transition: { duration: 0.15 } }}
+                transition={{ duration: 0.24 }}
+              >
+                <FileText size={18} />
+                <a href={a.url} target="_blank" rel="noreferrer">
+                  <strong>{a.fileName}</strong>
+                  <small>{Math.ceil(a.size / 1024)} KB</small>
+                </a>
+                {canManage && (
+                  <button onClick={() => onDeleteAttachment(a.id)} aria-label={`Remove ${a.fileName}`}>
+                    <X size={14} />
+                  </button>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </section>
 
         <section className="card">
@@ -254,15 +318,25 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
               <h3>Comments — {task.comments.length}</h3>
             </div>
           </div>
-          {task.comments.map((c) => (
-            <div className="task-comment" key={c.id}>
-              <div className="task-comment-head">
-                <strong>{c.author.displayName}</strong>
-                <time>{new Date(c.createdAt).toLocaleString()}</time>
-              </div>
-              <p>{c.body}</p>
-            </div>
-          ))}
+          <AnimatePresence initial={false}>
+            {task.comments.map((c) => (
+              <motion.div
+                className="task-comment"
+                key={c.id}
+                layout
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.24 }}
+              >
+                <div className="task-comment-head">
+                  <strong>{c.author.displayName}</strong>
+                  <time>{new Date(c.createdAt).toLocaleString()}</time>
+                </div>
+                <p>{c.body}</p>
+              </motion.div>
+            ))}
+          </AnimatePresence>
           <form className="settings-form" onSubmit={onAddComment} style={{ marginTop: 14 }}>
             <label>
               Add a comment
@@ -303,16 +377,18 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
         </section>
       </div>
 
-      {editOpen && (
-        <EditTaskDialog
-          task={task}
-          onClose={() => setEditOpen(false)}
-          onSaved={(updated) => {
-            setTask(updated);
-            setEditOpen(false);
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {editOpen && (
+          <EditTaskDialog
+            task={task}
+            onClose={() => setEditOpen(false)}
+            onSaved={(updated) => {
+              setTask(updated);
+              setEditOpen(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </AppShell>
   );
 }
@@ -363,8 +439,24 @@ function EditTaskDialog({
   }
 
   return (
-    <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-task-title">
+    <motion.div
+      className="share-backdrop"
+      variants={dialogBackdrop}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+      <motion.section
+        className="share-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-task-title"
+        variants={dialogPanel}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <header>
           <div>
             <h2 id="edit-task-title">Edit task</h2>
@@ -410,7 +502,7 @@ function EditTaskDialog({
             {submitting ? "Saving…" : "Save changes"}
           </button>
         </form>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }

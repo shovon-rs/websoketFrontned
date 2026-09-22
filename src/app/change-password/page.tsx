@@ -1,10 +1,14 @@
 "use client";
 
+import { AuthErrorMessage } from "@/components/AuthErrorMessage";
 import { PasswordField } from "@/components/PasswordField";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
+import { fadeIn, fadeInUp, tapScale } from "@/lib/motion";
 import { strongPasswordError } from "@/lib/password";
-import { Zap } from "lucide-react";
+import { motion } from "framer-motion";
+import { Loader2, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -13,6 +17,7 @@ export default function ChangePasswordRequired() {
 	const { status, user, changePassword } = useAuth();
 	const [error, setError] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
+	const [newPassword, setNewPassword] = useState("");
 
 	useEffect(() => {
 		if (status === "unauthenticated") router.replace("/login");
@@ -59,7 +64,7 @@ export default function ChangePasswordRequired() {
 
 	return (
 		<main className="auth">
-			<section className="auth-art">
+			<motion.section className="auth-art" variants={fadeIn} initial="hidden" animate="visible">
 				<span className="brand light">
 					<span className="brand-mark">
 						<Zap fill="currentColor" />
@@ -75,9 +80,9 @@ export default function ChangePasswordRequired() {
 					</p>
 				</div>
 				<small>© 2026 Relay, Inc.</small>
-			</section>
+			</motion.section>
 			<section className="auth-form">
-				<form onSubmit={onSubmit}>
+				<motion.form onSubmit={onSubmit} variants={fadeInUp} initial="hidden" animate="visible">
 					<h2>Set a new password</h2>
 					<p>Enter the temporary password you were given, then choose a new one.</p>
 					<label>
@@ -97,7 +102,9 @@ export default function ChangePasswordRequired() {
 							minLength={8}
 							autoComplete="new-password"
 							required
+							onChange={setNewPassword}
 						/>
+						<PasswordStrengthMeter password={newPassword} />
 						<small>
 							Must be 8+ characters with an uppercase letter, a lowercase
 							letter, a number, and a special character.
@@ -113,15 +120,12 @@ export default function ChangePasswordRequired() {
 							required
 						/>
 					</label>
-					{error && (
-						<p className="auth-error" role="alert">
-							{error}
-						</p>
-					)}
-					<button className="primary wide" disabled={submitting}>
+					<AuthErrorMessage message={error} />
+					<motion.button className="primary wide" disabled={submitting} whileTap={tapScale}>
+						{submitting && <Loader2 size={16} className="spin btn-spinner" />}
 						{submitting ? "Saving…" : "Continue"}
-					</button>
-				</form>
+					</motion.button>
+				</motion.form>
 			</section>
 		</main>
 	);

@@ -5,12 +5,14 @@ import { UserSearchDropdown } from "@/components/UserSearchDropdown";
 import { PageShimmer } from "@/components/Shimmer";
 import { Mic, MicOff, MonitorUp, PhoneOff, Video, VideoOff, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useWs } from "@/lib/ws-context";
 import { useWebRTCCall } from "@/lib/use-webrtc";
 import * as callsApi from "@/lib/api/calls.api";
 import { ApiError } from "@/lib/api-client";
+import { fadeInUp, scaleIn, tapScale } from "@/lib/motion";
 import type { Call, CallType, User } from "@/lib/types";
 
 function initialsOf(name: string): string {
@@ -58,7 +60,7 @@ function StartCallPicker() {
     send("call:initiate", { calleeId: recipient.id, callType });
   }
 
-  return <AppShell title="Calls"><div className="page narrow"><section className="card">
+  return <AppShell title="Calls"><div className="page narrow"><motion.section className="card" variants={fadeInUp} initial="hidden" animate="visible">
     <h3>Start a call</h3>
     <p className="quiet">Search for a teammate and choose audio or video.</p>
 
@@ -66,19 +68,21 @@ function StartCallPicker() {
       <UserSearchDropdown onSelect={setRecipient} placeholder="Search people by name or email…" autoFocus />
     </div>}
 
-    {recipient && <div className="selected-recipient">
+    {recipient && <motion.div className="selected-recipient" variants={scaleIn} initial="hidden" animate="visible">
       <Avatar initials={initialsOf(recipient.displayName)} color="green" />
       <div><strong>{recipient.displayName}</strong><small>{recipient.email}</small></div>
       <button onClick={() => setRecipient(null)} disabled={dialing}><X size={14} style={{ verticalAlign: "-2px", marginRight: 4 }}/>Change</button>
-    </div>}
+    </motion.div>}
 
     <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
       <button className={callType === "audio" ? "primary" : "plain"} onClick={() => setCallType("audio")} disabled={dialing}>Audio</button>
       <button className={callType === "video" ? "primary" : "plain"} onClick={() => setCallType("video")} disabled={dialing}>Video</button>
     </div>
     {error && <p className="auth-error">{error}</p>}
-    <button className="primary wide" onClick={startCall} disabled={!recipient || dialing}>{dialing ? "Calling…" : "Call"}</button>
-  </section></div></AppShell>;
+    <motion.button className="primary wide" onClick={startCall} disabled={!recipient || dialing} whileTap={!dialing ? tapScale : undefined}>
+      {dialing ? "Calling…" : "Call"}
+    </motion.button>
+  </motion.section></div></AppShell>;
 }
 
 function ActiveCall({ call, callId }: { call: Call; callId: string }) {
@@ -101,25 +105,27 @@ function ActiveCall({ call, callId }: { call: Call; callId: string }) {
 
   const statusLabel = phase === "ringing" ? "Ringing…" : phase === "connecting" ? "Connecting…" : phase === "active" ? "Live" : phase === "failed" ? "Connection failed" : "Call ended";
 
+  const waitingForRemote = phase === "ringing" || phase === "connecting";
+
   return <AppShell title={call.type === "video" ? "Video call" : "Audio call"}>
     <div className="call-room">
       <div className="call-info"><span><i/> {statusLabel}</span><strong>{call.type === "video" ? "Video call" : "Audio call"}</strong></div>
       {phase === "failed" && error && <p className="auth-error" style={{ margin: "0 0 16px" }}>{error}</p>}
       <div className="video-grid">
-        <div className="video-tile you">
+        <motion.div className="video-tile you" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
           {call.type === "video" && cameraOn ? <video ref={localVideoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} /> : <span>You</span>}
           <label>You{muted ? " · Muted" : ""}</label>
-        </div>
-        <div className="video-tile maya">
+        </motion.div>
+        <motion.div className={`video-tile maya${waitingForRemote ? " connecting" : ""}`} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, delay: 0.06 }}>
           {remoteStream && call.type === "video" ? <video ref={remoteVideoRef} autoPlay playsInline style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} /> : <span>{remoteStream ? "" : "…"}</span>}
           <label>{remoteStream ? "Participant" : "Waiting to join"}</label>
-        </div>
+        </motion.div>
       </div>
       <div className="call-controls">
-        <button onClick={toggleMute} className={muted ? "off" : ""}>{muted ? <MicOff/> : <Mic/>}</button>
-        {call.type === "video" && <button onClick={toggleCamera} className={!cameraOn ? "off" : ""}>{cameraOn ? <Video/> : <VideoOff/>}</button>}
-        {call.type === "video" && <button onClick={toggleScreenShare} className={sharingScreen ? "off" : ""}><MonitorUp/></button>}
-        <button className="hang" onClick={hangUp}><PhoneOff/></button>
+        <motion.button onClick={toggleMute} className={muted ? "off" : ""} whileTap={tapScale}>{muted ? <MicOff/> : <Mic/>}</motion.button>
+        {call.type === "video" && <motion.button onClick={toggleCamera} className={!cameraOn ? "off" : ""} whileTap={tapScale}>{cameraOn ? <Video/> : <VideoOff/>}</motion.button>}
+        {call.type === "video" && <motion.button onClick={toggleScreenShare} className={sharingScreen ? "off" : ""} whileTap={tapScale}><MonitorUp/></motion.button>}
+        <motion.button className="hang" onClick={hangUp} whileTap={tapScale}><PhoneOff/></motion.button>
       </div>
     </div>
   </AppShell>;

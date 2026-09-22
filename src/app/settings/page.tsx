@@ -1,13 +1,17 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
+import { AuthErrorMessage } from "@/components/AuthErrorMessage";
 import { Avatar } from "@/components/Avatar";
 import { PasswordField } from "@/components/PasswordField";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 import { PageShimmer, Shimmer } from "@/components/Shimmer";
 import { ApiError } from "@/lib/api-client";
 import * as usersApi from "@/lib/api/users.api";
 import { useAuth } from "@/lib/auth-context";
+import { staggerContainer, staggerItem, tapScale } from "@/lib/motion";
 import { strongPasswordError } from "@/lib/password";
-import { Camera } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Camera, Check, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 
 function initialsOf(name: string): string {
@@ -17,6 +21,25 @@ function initialsOf(name: string): string {
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_BYTES = 5 * 1024 * 1024;
+
+function SaveConfirmation({ show }: { show: boolean }) {
+	return (
+		<AnimatePresence>
+			{show && (
+				<motion.span
+					className="save-confirmation"
+					initial={{ opacity: 0, scale: 0.8 }}
+					animate={{ opacity: 1, scale: 1 }}
+					exit={{ opacity: 0, scale: 0.9 }}
+					transition={{ duration: 0.22, ease: [0.34, 1.56, 0.64, 1] }}
+				>
+					<Check size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />
+					Saved
+				</motion.span>
+			)}
+		</AnimatePresence>
+	);
+}
 
 export default function Settings() {
 	const { user, updateProfile, changePassword, setAvatarUrl } = useAuth();
@@ -34,11 +57,12 @@ export default function Settings() {
 	const [uploadingPhoto, setUploadingPhoto] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const objectUrlRef = useRef<string | null>(null);
+	const [newPasswordValue, setNewPasswordValue] = useState("");
 
 	if (!user)
 		return (
 			<AppShell title="Settings">
-				<PageShimmer />
+				<PageShimmer variant="form" />
 			</AppShell>
 		);
 
@@ -95,6 +119,7 @@ export default function Settings() {
 			await changePassword(oldPassword, newPassword);
 			setPasswordSaved(true);
 			e.currentTarget.reset();
+			setNewPasswordValue("");
 		} catch (err) {
 			setPasswordError(
 				err instanceof ApiError
@@ -165,17 +190,33 @@ export default function Settings() {
 
 	return (
 		<AppShell title="Settings" subtitle="Manage your profile information.">
-			<div className="page narrow">
-				<section className="card">
+			<motion.div
+				className="page narrow"
+				variants={staggerContainer}
+				initial="hidden"
+				animate="visible"
+			>
+				<motion.section className="card" variants={staggerItem}>
 					<div className="card-head">
 						<div style={{ display: "flex", alignItems: "center", gap: 14 }}>
 							<div className="avatar-edit">
-								<Avatar
-									initials={initialsOf(user.displayName)}
-									color="green"
-									size="lg"
-									src={shownAvatarUrl}
-								/>
+								<AnimatePresence mode="wait" initial={false}>
+									<motion.span
+										key={shownAvatarUrl ?? "none"}
+										initial={{ opacity: 0 }}
+										animate={{ opacity: 1 }}
+										exit={{ opacity: 0 }}
+										transition={{ duration: 0.22 }}
+										style={{ display: "inline-flex" }}
+									>
+										<Avatar
+											initials={initialsOf(user.displayName)}
+											color="green"
+											size="lg"
+											src={shownAvatarUrl}
+										/>
+									</motion.span>
+								</AnimatePresence>
 								<button
 									type="button"
 									onClick={() => fileInputRef.current?.click()}
@@ -207,7 +248,7 @@ export default function Settings() {
 							</div>
 						</div>
 					</div>
-					{photoError && <p className="auth-error">{photoError}</p>}
+					<AuthErrorMessage message={photoError} />
 
 					<form className="settings-form" onSubmit={onSubmit}>
 						<label>
@@ -242,20 +283,23 @@ export default function Settings() {
 							</label>
 						)}
 
-						{error && <p className="auth-error">{error}</p>}
+						<AuthErrorMessage message={error} />
 
 						<div className="actions">
-							<button className="primary" disabled={submitting || !dirty}>
+							<motion.button
+								className="primary"
+								disabled={submitting || !dirty}
+								whileTap={tapScale}
+							>
+								{submitting && <Loader2 size={14} className="spin btn-spinner" />}
 								{submitting ? "Saving…" : "Save changes"}
-							</button>
-							{saved && !dirty && (
-								<span className="save-confirmation">Saved</span>
-							)}
+							</motion.button>
+							<SaveConfirmation show={saved && !dirty} />
 						</div>
 					</form>
-				</section>
+				</motion.section>
 
-				<section className="card">
+				<motion.section className="card" variants={staggerItem}>
 					<div className="card-head">
 						<div>
 							<h3>Password</h3>
@@ -280,7 +324,9 @@ export default function Settings() {
 								minLength={8}
 								autoComplete="new-password"
 								required
+								onChange={setNewPasswordValue}
 							/>
+							<PasswordStrengthMeter password={newPasswordValue} />
 							<small>
 								Must be 8+ characters with an uppercase letter, a lowercase
 								letter, a number, and a special character.
@@ -297,19 +343,22 @@ export default function Settings() {
 							/>
 						</label>
 
-						{passwordError && <p className="auth-error">{passwordError}</p>}
+						<AuthErrorMessage message={passwordError} />
 
 						<div className="actions">
-							<button className="primary" disabled={changingPassword}>
+							<motion.button
+								className="primary"
+								disabled={changingPassword}
+								whileTap={tapScale}
+							>
+								{changingPassword && <Loader2 size={14} className="spin btn-spinner" />}
 								{changingPassword ? "Changing…" : "Change password"}
-							</button>
-							{passwordSaved && (
-								<span className="save-confirmation">Saved</span>
-							)}
+							</motion.button>
+							<SaveConfirmation show={passwordSaved} />
 						</div>
 					</form>
-				</section>
-			</div>
+				</motion.section>
+			</motion.div>
 		</AppShell>
 	);
 }

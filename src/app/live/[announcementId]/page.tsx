@@ -1,12 +1,15 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
+import { PageShimmer } from "@/components/Shimmer";
 import { Mic, MicOff, MonitorUp, PhoneOff, Video, VideoOff } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useLiveBroadcast } from "@/lib/use-live-broadcast";
 import * as announcementsApi from "@/lib/api/announcements.api";
 import { ApiError } from "@/lib/api-client";
+import { tapScale } from "@/lib/motion";
 import type { Announcement } from "@/lib/types";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -45,12 +48,28 @@ function BroadcasterView({ announcement }: { announcement: Announcement }) {
     <AppShell title="Live stream">
       <div className="call-room">
         <div className="call-info">
-          <span><i /> {statusLabel}</span>
-          <strong>{announcement.title}{viewerCount > 0 ? ` · ${viewerCount} watching` : ""}</strong>
+          <span className={phase === "live" ? "live-badge" : ""}><i /> {statusLabel}</span>
+          <strong>
+            {announcement.title}
+            <AnimatePresence mode="wait" initial={false}>
+              {viewerCount > 0 && (
+                <motion.span
+                  key={viewerCount}
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.18 }}
+                  style={{ display: "inline-block", marginLeft: 4 }}
+                >
+                  {` · ${viewerCount} watching`}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </strong>
         </div>
         {phase === "failed" && error && <p className="auth-error" style={{ margin: "0 0 16px" }}>{error}</p>}
         <div className="video-grid">
-          <div className="video-tile you">
+          <motion.div className="video-tile you" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
             {cameraOn ? (
               <video
                 ref={localVideoRef}
@@ -63,13 +82,13 @@ function BroadcasterView({ announcement }: { announcement: Announcement }) {
               <span>You</span>
             )}
             <label>You{muted ? " · Muted" : ""}</label>
-          </div>
+          </motion.div>
         </div>
         <div className="call-controls">
-          <button onClick={toggleMute} className={muted ? "off" : ""}>{muted ? <MicOff /> : <Mic />}</button>
-          <button onClick={toggleCamera} className={!cameraOn ? "off" : ""}>{cameraOn ? <Video /> : <VideoOff />}</button>
-          <button onClick={toggleScreenShare} className={sharingScreen ? "off" : ""}><MonitorUp /></button>
-          <button className="hang" onClick={endStream}><PhoneOff /></button>
+          <motion.button onClick={toggleMute} className={muted ? "off" : ""} whileTap={tapScale}>{muted ? <MicOff /> : <Mic />}</motion.button>
+          <motion.button onClick={toggleCamera} className={!cameraOn ? "off" : ""} whileTap={tapScale}>{cameraOn ? <Video /> : <VideoOff />}</motion.button>
+          <motion.button onClick={toggleScreenShare} className={sharingScreen ? "off" : ""} whileTap={tapScale}><MonitorUp /></motion.button>
+          <motion.button className="hang" onClick={endStream} whileTap={tapScale}><PhoneOff /></motion.button>
         </div>
       </div>
     </AppShell>
@@ -96,14 +115,20 @@ function ViewerRoom({ announcement }: { announcement: Announcement }) {
   }
 
   const statusLabel = phase === "connecting" || phase === "waiting" ? "Waiting for the host to start…" : STATUS_LABEL[phase];
+  const waitingForHost = !remoteStream;
 
   return (
     <AppShell title="Live stream">
       <div className="call-room">
-        <div className="call-info"><span><i /> {statusLabel}</span><strong>{announcement.title}</strong></div>
+        <div className="call-info"><span className={phase === "live" ? "live-badge" : ""}><i /> {statusLabel}</span><strong>{announcement.title}</strong></div>
         {phase === "failed" && error && <p className="auth-error" style={{ margin: "0 0 16px" }}>{error}</p>}
         <div className="video-grid">
-          <div className="video-tile maya">
+          <motion.div
+            className={`video-tile maya${waitingForHost ? " connecting" : ""}`}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
             {remoteStream ? (
               <video
                 ref={remoteVideoRef}
@@ -115,10 +140,10 @@ function ViewerRoom({ announcement }: { announcement: Announcement }) {
               <span>…</span>
             )}
             <label>{remoteStream ? "Host" : "Waiting to join"}</label>
-          </div>
+          </motion.div>
         </div>
         <div className="call-controls">
-          <button className="hang" onClick={onLeave}><PhoneOff /></button>
+          <motion.button className="hang" onClick={onLeave} whileTap={tapScale}><PhoneOff /></motion.button>
         </div>
       </div>
     </AppShell>
@@ -152,7 +177,7 @@ export default function LiveRoomPage({ params }: { params: { announcementId: str
     };
   }, [params.announcementId]);
 
-  if (announcement === "loading") return <AppShell title="Live"><div className="page">Loading…</div></AppShell>;
+  if (announcement === "loading") return <AppShell title="Live"><PageShimmer variant="call" /></AppShell>;
   if (loadError) {
     return (
       <AppShell title="Live">

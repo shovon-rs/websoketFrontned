@@ -4,8 +4,10 @@ import { PageShimmer } from "@/components/Shimmer";
 import { ApiError } from "@/lib/api-client";
 import * as projectsApi from "@/lib/api/projects.api";
 import * as tasksApi from "@/lib/api/tasks.api";
+import { dialogBackdrop, dialogPanel, staggerContainer, staggerItem } from "@/lib/motion";
 import type { ProjectSummary, Task } from "@/lib/types";
 import { formatTimeShort } from "@/lib/time";
+import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -37,15 +39,27 @@ function buildGrid(monthCursor: Date): Date[] {
   return days;
 }
 
+const monthVariants = {
+  enter: (direction: number) => ({ opacity: 0, x: direction * 24 }),
+  center: { opacity: 1, x: 0, transition: { duration: 0.28, ease: [0.16, 1, 0.3, 1] as const } },
+  exit: (direction: number) => ({ opacity: 0, x: direction * -24, transition: { duration: 0.18, ease: [0.65, 0, 0.35, 1] as const } }),
+};
+
 export default function CalendarPage() {
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [direction, setDirection] = useState(0);
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
+
+  function goToMonth(next: Date, dir: number) {
+    setDirection(dir);
+    setMonthCursor(next);
+  }
 
   const days = useMemo(() => buildGrid(monthCursor), [monthCursor]);
   const today = useMemo(() => toDateKey(new Date()), []);
@@ -94,14 +108,35 @@ export default function CalendarPage() {
     <AppShell title="Calendar" subtitle="Tasks by due date.">
       <div className="page">
         <div className="calendar-toolbar">
-          <button className="plain" onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))} aria-label="Previous month">
+          <button
+            className="plain"
+            onClick={() => goToMonth(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1), -1)}
+            aria-label="Previous month"
+          >
             <ChevronLeft size={16} />
           </button>
-          <strong>{monthCursor.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</strong>
-          <button className="plain" onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))} aria-label="Next month">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.strong
+              key={`${monthCursor.getFullYear()}-${monthCursor.getMonth()}`}
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.18 }}
+            >
+              {monthCursor.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+            </motion.strong>
+          </AnimatePresence>
+          <button
+            className="plain"
+            onClick={() => goToMonth(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1), 1)}
+            aria-label="Next month"
+          >
             <ChevronRight size={16} />
           </button>
-          <button className="plain" onClick={() => setMonthCursor(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}>
+          <button
+            className="plain"
+            onClick={() => goToMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 0)}
+          >
             Today
           </button>
         </div>
@@ -112,91 +147,129 @@ export default function CalendarPage() {
           </p>
         )}
 
-        {!tasks && !error && <PageShimmer />}
+        {!tasks && !error && <PageShimmer variant="calendar" />}
 
         {tasks && (
-          <div className="calendar-grid">
-            {WEEKDAY_LABELS.map((label) => (
-              <div className="calendar-weekday" key={label}>
-                {label}
-              </div>
-            ))}
-            {days.map((day) => {
-              const key = toDateKey(day);
-              const inMonth = day.getMonth() === monthCursor.getMonth();
-              const dayTasks = tasksByDay.get(key) ?? [];
-              const visible = dayTasks.slice(0, MAX_CHIPS_PER_DAY);
-              const overflow = dayTasks.length - visible.length;
-              return (
-                <div
-                  className={`calendar-cell${inMonth ? "" : " outside"}${key === today ? " today" : ""}`}
-                  key={key}
-                >
-                  <span className="calendar-cell-date">{day.getDate()}</span>
-                  <div className="calendar-chip-list">
-                    {visible.map((task) => (
-                      <Link
-                        href={`/tasks/${task.id}`}
-                        key={task.id}
-                        className="calendar-chip"
-                        style={{ borderLeftColor: (task.projectId && projectColor.get(task.projectId)) || "var(--line)" }}
-                        title={formatTimeShort(task.dueDate!) ? `${formatTimeShort(task.dueDate!)} · ${task.title}` : task.title}
-                      >
-                        {formatTimeShort(task.dueDate!) && (
-                          <span className="calendar-chip-time">{formatTimeShort(task.dueDate!)}</span>
-                        )}
-                        {task.title}
-                      </Link>
-                    ))}
-                    {overflow > 0 && (
-                      <button className="calendar-chip-more" onClick={() => setSelectedDayKey(key)}>
-                        +{overflow} more
-                      </button>
-                    )}
-                  </div>
+          <div className="calendar-grid-wrap">
+            <div className="calendar-grid calendar-grid-weekdays">
+              {WEEKDAY_LABELS.map((label) => (
+                <div className="calendar-weekday" key={label}>
+                  {label}
                 </div>
-              );
-            })}
+              ))}
+            </div>
+            <AnimatePresence mode="wait" custom={direction} initial={false}>
+              <motion.div
+                className="calendar-grid"
+                key={`${monthCursor.getFullYear()}-${monthCursor.getMonth()}`}
+                custom={direction}
+                variants={monthVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+              >
+                {days.map((day) => {
+                  const key = toDateKey(day);
+                  const inMonth = day.getMonth() === monthCursor.getMonth();
+                  const dayTasks = tasksByDay.get(key) ?? [];
+                  const visible = dayTasks.slice(0, MAX_CHIPS_PER_DAY);
+                  const overflow = dayTasks.length - visible.length;
+                  return (
+                    <div
+                      className={`calendar-cell${inMonth ? "" : " outside"}${key === today ? " today" : ""}`}
+                      key={key}
+                    >
+                      <span className="calendar-cell-date">{day.getDate()}</span>
+                      <motion.div
+                        className="calendar-chip-list"
+                        variants={staggerContainer}
+                        initial="hidden"
+                        animate="visible"
+                      >
+                        {visible.map((task) => (
+                          <motion.div key={task.id} variants={staggerItem}>
+                            <Link
+                              href={`/tasks/${task.id}`}
+                              className="calendar-chip"
+                              style={{ borderLeftColor: (task.projectId && projectColor.get(task.projectId)) || "var(--line)" }}
+                              title={formatTimeShort(task.dueDate!) ? `${formatTimeShort(task.dueDate!)} · ${task.title}` : task.title}
+                            >
+                              {formatTimeShort(task.dueDate!) && (
+                                <span className="calendar-chip-time">{formatTimeShort(task.dueDate!)}</span>
+                              )}
+                              {task.title}
+                            </Link>
+                          </motion.div>
+                        ))}
+                        {overflow > 0 && (
+                          <button className="calendar-chip-more" onClick={() => setSelectedDayKey(key)}>
+                            +{overflow} more
+                          </button>
+                        )}
+                      </motion.div>
+                    </div>
+                  );
+                })}
+              </motion.div>
+            </AnimatePresence>
           </div>
         )}
       </div>
 
-      {selectedDayKey && (
-        <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedDayKey(null); }}>
-          <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="calendar-day-title">
-            <header>
+      <AnimatePresence>
+        {selectedDayKey && (
+          <motion.div
+            className="share-backdrop"
+            variants={dialogBackdrop}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedDayKey(null); }}
+          >
+            <motion.section
+              className="share-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="calendar-day-title"
+              variants={dialogPanel}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <header>
+                <div>
+                  <h2 id="calendar-day-title">
+                    {parseDateKey(selectedDayKey).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+                  </h2>
+                  <p>{selectedTasks.length} task{selectedTasks.length === 1 ? "" : "s"} due</p>
+                </div>
+                <button onClick={() => setSelectedDayKey(null)} aria-label="Close">
+                  <X size={18} />
+                </button>
+              </header>
               <div>
-                <h2 id="calendar-day-title">
-                  {parseDateKey(selectedDayKey).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
-                </h2>
-                <p>{selectedTasks.length} task{selectedTasks.length === 1 ? "" : "s"} due</p>
+                {selectedTasks.map((task) => (
+                  <Link
+                    href={`/tasks/${task.id}`}
+                    className="activity-row"
+                    key={task.id}
+                    onClick={() => setSelectedDayKey(null)}
+                  >
+                    <span
+                      className="color-dot"
+                      style={{ background: (task.projectId && projectColor.get(task.projectId)) || "var(--line)" }}
+                    />
+                    <div>
+                      <strong>{task.title}</strong>
+                      <small>{task.priority}</small>
+                    </div>
+                  </Link>
+                ))}
               </div>
-              <button onClick={() => setSelectedDayKey(null)} aria-label="Close">
-                <X size={18} />
-              </button>
-            </header>
-            <div>
-              {selectedTasks.map((task) => (
-                <Link
-                  href={`/tasks/${task.id}`}
-                  className="activity-row"
-                  key={task.id}
-                  onClick={() => setSelectedDayKey(null)}
-                >
-                  <span
-                    className="color-dot"
-                    style={{ background: (task.projectId && projectColor.get(task.projectId)) || "var(--line)" }}
-                  />
-                  <div>
-                    <strong>{task.title}</strong>
-                    <small>{task.priority}</small>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        </div>
-      )}
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AppShell>
   );
 }

@@ -1,15 +1,18 @@
 "use client";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
+import { ListShimmer } from "@/components/Shimmer";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ApiError } from "@/lib/api-client";
 import * as tasksApi from "@/lib/api/tasks.api";
 import { useAuth } from "@/lib/auth-context";
+import { dialogBackdrop, dialogPanel, staggerContainer, staggerItem } from "@/lib/motion";
 import { isManager } from "@/lib/roles";
 import { formatDueDate } from "@/lib/time";
 import type { Task, TaskPerson, TaskPriority, TaskStatus, User } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
-import { FileText, Paperclip, MessageSquare, Plus, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ClipboardList, FileText, Paperclip, MessageSquare, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -87,49 +90,70 @@ export default function TasksPage() {
           )}
         </div>
 
-        <section className="card">
-          {error && <p className="auth-error" role="alert">{error}</p>}
-          {!tasks && !error && <p className="quiet">Loading tasks…</p>}
-          {tasks && tasks.length === 0 && <p className="quiet">No tasks here yet.</p>}
-          {tasks?.map((task) => (
-            <Link href={`/tasks/${task.id}`} className="activity-row" key={task.id}>
-              <Avatar initials={initialsOf(task.assignees[0]?.displayName ?? "?")} color="blue" size="sm" />
-              <div>
-                <strong>{task.title}</strong>
-                <small>Assigned to {assigneeSummary(task.assignees)}</small>
-              </div>
-              <span className={`task-status ${task.status}`}>{STATUS_LABEL[task.status]}</span>
-              <span className="quiet" style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                {task.dueDate && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                    Due {formatDueDate(task.dueDate)}
+        {error && <p className="auth-error" role="alert">{error}</p>}
+        {!tasks && !error && <ListShimmer rows={5} />}
+
+        {tasks && tasks.length === 0 && (
+          <section className="card">
+            <div className="empty-state">
+              <ClipboardList size={26} />
+              <h3 style={{ margin: 0 }}>No tasks here yet.</h3>
+              <p className="quiet">{canCreate ? "Create one to start tracking work." : "Nothing assigned to the team yet."}</p>
+            </div>
+          </section>
+        )}
+
+        {tasks && tasks.length > 0 && (
+          <motion.section
+            className="card"
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+          >
+            {tasks.map((task) => (
+              <motion.div variants={staggerItem} key={task.id}>
+                <Link href={`/tasks/${task.id}`} className="activity-row task-row">
+                  <Avatar initials={initialsOf(task.assignees[0]?.displayName ?? "?")} color="blue" size="sm" />
+                  <div>
+                    <strong>{task.title}</strong>
+                    <small>Assigned to {assigneeSummary(task.assignees)}</small>
+                  </div>
+                  <span className={`task-status ${task.status}`}>{STATUS_LABEL[task.status]}</span>
+                  <span className="quiet" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    {task.dueDate && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        Due {formatDueDate(task.dueDate)}
+                      </span>
+                    )}
+                    {task.attachments.length > 0 && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        <Paperclip size={13} /> {task.attachments.length}
+                      </span>
+                    )}
+                    {task.comments.length > 0 && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        <MessageSquare size={13} /> {task.comments.length}
+                      </span>
+                    )}
                   </span>
-                )}
-                {task.attachments.length > 0 && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                    <Paperclip size={13} /> {task.attachments.length}
-                  </span>
-                )}
-                {task.comments.length > 0 && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                    <MessageSquare size={13} /> {task.comments.length}
-                  </span>
-                )}
-              </span>
-            </Link>
-          ))}
-        </section>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.section>
+        )}
       </div>
 
-      {createOpen && (
-        <CreateTaskDialog
-          onClose={() => setCreateOpen(false)}
-          onCreated={(task) => {
-            setTasks((prev) => (prev ? [task, ...prev] : prev));
-            setCreateOpen(false);
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {createOpen && (
+          <CreateTaskDialog
+            onClose={() => setCreateOpen(false)}
+            onCreated={(task) => {
+              setTasks((prev) => (prev ? [task, ...prev] : prev));
+              setCreateOpen(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </AppShell>
   );
 }
@@ -207,8 +231,24 @@ function CreateTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreat
   }
 
   return (
-    <div className="share-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="share-dialog" role="dialog" aria-modal="true" aria-labelledby="create-task-title">
+    <motion.div
+      className="share-backdrop"
+      variants={dialogBackdrop}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+      <motion.section
+        className="share-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-task-title"
+        variants={dialogPanel}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <header>
           <div>
             <h2 id="create-task-title">New task</h2>
@@ -290,7 +330,7 @@ function CreateTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreat
             {submitting ? "Creating…" : "Create task"}
           </button>
         </form>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }
