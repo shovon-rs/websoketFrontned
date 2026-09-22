@@ -8,6 +8,7 @@ const BOTTOM_PAD = 25;
 
 export function Chart({ data }: ChartProps) {
   const max = Math.max(1, ...data.map((d) => d.count));
+  const isEmpty = data.every((d) => d.count === 0);
   const stepX = data.length > 1 ? WIDTH / (data.length - 1) : 0;
   const points = data.map((d, i) => [i * stepX, HEIGHT - (d.count / max) * HEIGHT] as const);
 
@@ -20,10 +21,16 @@ export function Chart({ data }: ChartProps) {
   return <div className="chart" aria-label="Message activity chart">
     <div className="y-labels">{yLabels.map((v, i) => <span key={i}>{v}</span>)}</div>
     <div className="chart-body">
+      {isEmpty && (
+        <div className="chart-empty">
+          <p>No messages yet this week</p>
+          <small>New activity will appear here as it happens.</small>
+        </div>
+      )}
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT + BOTTOM_PAD}`} preserveAspectRatio="none">
-        <defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ff6b4a" stopOpacity=".24"/><stop offset="1" stopColor="#ff6b4a" stopOpacity="0"/></linearGradient></defs>
-        <path className="area" d={areaPath}/>
-        <path className="line" d={linePath}/>
+        <defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#6366f1" stopOpacity=".22"/><stop offset="1" stopColor="#6366f1" stopOpacity="0"/></linearGradient></defs>
+        {!isEmpty && <path className="area" d={areaPath}/>}
+        {!isEmpty && <path className="line" d={linePath}/>}
       </svg>
       <div className="x-labels">{xLabels.map((l, i) => <span key={i}>{l}</span>)}</div>
     </div>
