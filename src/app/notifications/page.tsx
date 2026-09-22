@@ -37,8 +37,42 @@ const icons: Record<string, typeof MessageCircle> = {
 function iconFor(n: AppNotification) {
 	// n.type is a severity ("info"/"success"/...), not an event-type string, so it never
 	// actually matches these keys — data.kind is what distinguishes an announcement in practice.
-	if (n.data?.kind === "announcement") return Radio;
+	if (n.data?.kind === "announcement" || n.data?.kind === "livestream-request") return Radio;
+	if (typeof n.data?.callId === "string") return PhoneIncoming;
+	if (typeof n.data?.documentId === "string") return FileText;
+	if (typeof n.data?.conversationId === "string") return MessageCircle;
 	return icons[n.type] ?? icons[n.title] ?? Bell;
+}
+
+/** Distinct accent per notification kind, mostly so a wall of identical peach icons doesn't
+ * read as one undifferentiated stream — matches the colored-chip language used elsewhere
+ * (dashboard metrics, quick actions). */
+function colorFor(n: AppNotification): string {
+	const data = n.data;
+	if (data?.kind === "announcement" || data?.kind === "livestream-request") return "coral";
+	if (typeof data?.callId === "string") return "green";
+	if (typeof data?.documentId === "string") return "violet";
+	if (typeof data?.conversationId === "string") return "blue";
+	if (typeof data?.taskId === "string") return "gold";
+	return "indigo";
+}
+
+const REACTION_PREFIX = "__relay_reaction__:";
+
+/** A reaction notification's body is the raw wire payload (`__relay_reaction__:{"emoji":"😀",...}`),
+ * never meant to be shown as-is — mirrors the same de-serialization the chat thread does for
+ * reaction messages, just for the notification feed instead. */
+function bodyFor(n: AppNotification): string {
+	if (!n.body.startsWith(REACTION_PREFIX)) return n.body;
+	try {
+		const parsed = JSON.parse(n.body.slice(REACTION_PREFIX.length)) as { emoji?: unknown };
+		if (typeof parsed.emoji === "string" && parsed.emoji) {
+			return `Reacted ${parsed.emoji} to your message`;
+		}
+	} catch {
+		// fall through to the generic label below
+	}
+	return "Reacted to your message";
 }
 
 function AnnouncementRowExtra({ n }: { n: AppNotification }) {
@@ -157,7 +191,7 @@ export default function Notifications() {
 			title="Notifications"
 			subtitle="Stay up to date with your workspace."
 		>
-			<div className="page narrow">
+			<div className="page notifications-grid">
 				<motion.section
 					className="card notification-card"
 					initial={{ opacity: 0, y: 14 }}
@@ -168,44 +202,6 @@ export default function Notifications() {
 						<div>
 							<h3>All notifications</h3>
 							<p>{unreadCount} unread updates</p>
-						</div>
-						<div style={{ display: "flex", gap: 8 }}>
-							{pushState !== "unsupported" && (
-								<button
-									className="plain"
-									onClick={enablePush}
-									disabled={pushState === "enabling" || pushState === "enabled"}
-								>
-									<BellRing
-										size={14}
-										style={{ verticalAlign: "-2px", marginRight: 4 }}
-									/>
-									{pushState === "enabled"
-										? "Push enabled"
-										: pushState === "enabling"
-											? "Enabling…"
-											: "Enable push"}
-								</button>
-							)}
-							<motion.button
-								className="plain"
-								onClick={markAllRead}
-								disabled={unreadCount === 0}
-								whileTap={tapScale}
-							>
-								{justMarkedAll ? (
-									<motion.span
-										key="done"
-										initial={{ opacity: 0, scale: 0.85 }}
-										animate={{ opacity: 1, scale: 1 }}
-										style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
-									>
-										<CheckCheck size={14} /> All read
-									</motion.span>
-								) : (
-									"Mark all as read"
-								)}
-							</motion.button>
 						</div>
 					</div>
 					{items.length === 0 && (
@@ -231,12 +227,12 @@ export default function Notifications() {
 										animate="visible"
 										exit={{ opacity: 0, height: 0 }}
 									>
-										<span className="tiny-icon coral">
+										<span className={`tiny-icon ${colorFor(n)}`}>
 											<Icon />
 										</span>
 										<span>
 											<strong>{n.title}</strong>
-											<small>{n.body}</small>
+											<small>{bodyFor(n)}</small>
 										</span>
 										{n.data?.kind === "announcement" && (
 											<AnnouncementRowExtra n={n} />
@@ -249,6 +245,54 @@ export default function Notifications() {
 						</AnimatePresence>
 					</motion.div>
 				</motion.section>
+
+				<aside className="card notification-prefs-card">
+					<h3>Overview</h3>
+					<p>Your notification activity at a glance.</p>
+					<div className="notification-stats">
+						<div className="notification-stat">
+							<strong>{items.length}</strong>
+							<small>Total</small>
+						</div>
+						<div className="notification-stat">
+							<strong>{unreadCount}</strong>
+							<small>Unread</small>
+						</div>
+					</div>
+					{pushState !== "unsupported" && (
+						<button
+							className="plain wide"
+							onClick={enablePush}
+							disabled={pushState === "enabling" || pushState === "enabled"}
+						>
+							<BellRing size={14} style={{ verticalAlign: "-2px", marginRight: 4 }} />
+							{pushState === "enabled"
+								? "Push enabled"
+								: pushState === "enabling"
+									? "Enabling…"
+									: "Enable push"}
+						</button>
+					)}
+					<motion.button
+						className="plain wide"
+						onClick={markAllRead}
+						disabled={unreadCount === 0}
+						whileTap={tapScale}
+					>
+						{justMarkedAll ? (
+							<motion.span
+								key="done"
+								initial={{ opacity: 0, scale: 0.85 }}
+								animate={{ opacity: 1, scale: 1 }}
+								style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+							>
+								<CheckCheck size={14} /> All read
+							</motion.span>
+						) : (
+							"Mark all as read"
+						)}
+					</motion.button>
+				</aside>
 			</div>
 		</AppShell>
 	);

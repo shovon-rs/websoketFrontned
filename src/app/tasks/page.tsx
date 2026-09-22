@@ -29,8 +29,10 @@ const FILTERS: { value: TaskStatus | "all"; label: string }[] = [
   { value: "done", label: "Done" },
 ];
 
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/);
+function initialsOf(name: string | null | undefined): string {
+  const trimmed = (name ?? "").trim();
+  if (!trimmed) return "?";
+  const parts = trimmed.split(/\s+/);
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
@@ -43,11 +45,18 @@ function assigneeSummary(people: TaskPerson[]): string {
 
 const TASK_NOTIFICATION_KINDS = new Set(["task:assigned", "task:status-changed", "task:comment-new"]);
 
+const STATUS_DOT_COLOR: Record<TaskStatus, string> = {
+  todo: "#7a83c4",
+  in_progress: "#e3a23c",
+  done: "#2f9663",
+};
+
 export default function TasksPage() {
   const { user } = useAuth();
   const { subscribe } = useWs();
   const [filter, setFilter] = useState<TaskStatus | "all">("all");
   const [tasks, setTasks] = useState<Task[] | null>(null);
+  const [taskCounts, setTaskCounts] = useState<Record<TaskStatus, number> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -58,89 +67,126 @@ export default function TasksPage() {
       .catch((err) => setError(err instanceof ApiError ? err.message : "Could not load tasks."));
   }, []);
 
+  // Independent of the filtered list above — the overview sidebar always needs the full
+  // breakdown by status, even while the visible list is narrowed to a single one.
+  const loadCounts = useCallback(() => {
+    tasksApi
+      .listTasks()
+      .then((all) => {
+        setTaskCounts({
+          todo: all.filter((t) => t.status === "todo").length,
+          in_progress: all.filter((t) => t.status === "in_progress").length,
+          done: all.filter((t) => t.status === "done").length,
+        });
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => load(filter), [filter, load]);
+  useEffect(() => loadCounts(), [loadCounts]);
 
   useEffect(() => {
     return subscribe("notification:new", (event) => {
       const payload = event.payload as { data?: { kind?: string } };
       if (!payload.data?.kind || !TASK_NOTIFICATION_KINDS.has(payload.data.kind)) return;
       load(filter);
+      loadCounts();
     });
-  }, [subscribe, load, filter]);
+  }, [subscribe, load, filter, loadCounts]);
 
   const canCreate = isManager(user?.role);
 
   return (
     <AppShell title="Tasks" subtitle="Track work assigned across the team.">
-      <div className="page narrow">
-        <div className="task-filters">
-          {FILTERS.map((f) => (
-            <button
-              key={f.value}
-              className={filter === f.value ? "primary" : "plain"}
-              onClick={() => setFilter(f.value)}
+      <div className="page tasks-grid">
+        <div>
+          <div className="task-filters">
+            {FILTERS.map((f) => (
+              <button
+                key={f.value}
+                className={filter === f.value ? "primary" : "plain"}
+                onClick={() => setFilter(f.value)}
+              >
+                {f.label}
+              </button>
+            ))}
+            {canCreate && (
+              <button className="primary" style={{ marginLeft: "auto" }} onClick={() => setCreateOpen(true)}>
+                <Plus size={16} /> New task
+              </button>
+            )}
+          </div>
+
+          {error && <p className="auth-error" role="alert">{error}</p>}
+          {!tasks && !error && <ListShimmer rows={5} />}
+
+          {tasks && tasks.length === 0 && (
+            <section className="card">
+              <div className="empty-state">
+                <ClipboardList size={26} />
+                <h3 style={{ margin: 0 }}>No tasks here yet.</h3>
+                <p className="quiet">{canCreate ? "Create one to start tracking work." : "Nothing assigned to the team yet."}</p>
+              </div>
+            </section>
+          )}
+
+          {tasks && tasks.length > 0 && (
+            <motion.section
+              className="card"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
             >
-              {f.label}
-            </button>
-          ))}
-          {canCreate && (
-            <button className="primary" style={{ marginLeft: "auto" }} onClick={() => setCreateOpen(true)}>
-              <Plus size={16} /> New task
-            </button>
+              {tasks.map((task) => (
+                <motion.div variants={staggerItem} key={task.id}>
+                  <Link href={`/tasks/${task.id}`} className="activity-row task-row">
+                    <Avatar initials={initialsOf(task.assignees[0]?.displayName ?? "?")} color="blue" size="sm" />
+                    <div>
+                      <strong>{task.title}</strong>
+                      <small>Assigned to {assigneeSummary(task.assignees)}</small>
+                    </div>
+                    <span className={`task-status ${task.status}`}>{STATUS_LABEL[task.status]}</span>
+                    <span className="quiet" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      {task.dueDate && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          Due {formatDueDate(task.dueDate)}
+                        </span>
+                      )}
+                      {task.attachments.length > 0 && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          <Paperclip size={13} /> {task.attachments.length}
+                        </span>
+                      )}
+                      {task.comments.length > 0 && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          <MessageSquare size={13} /> {task.comments.length}
+                        </span>
+                      )}
+                    </span>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.section>
           )}
         </div>
 
-        {error && <p className="auth-error" role="alert">{error}</p>}
-        {!tasks && !error && <ListShimmer rows={5} />}
-
-        {tasks && tasks.length === 0 && (
-          <section className="card">
-            <div className="empty-state">
-              <ClipboardList size={26} />
-              <h3 style={{ margin: 0 }}>No tasks here yet.</h3>
-              <p className="quiet">{canCreate ? "Create one to start tracking work." : "Nothing assigned to the team yet."}</p>
-            </div>
-          </section>
-        )}
-
-        {tasks && tasks.length > 0 && (
-          <motion.section
-            className="card"
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-          >
-            {tasks.map((task) => (
-              <motion.div variants={staggerItem} key={task.id}>
-                <Link href={`/tasks/${task.id}`} className="activity-row task-row">
-                  <Avatar initials={initialsOf(task.assignees[0]?.displayName ?? "?")} color="blue" size="sm" />
-                  <div>
-                    <strong>{task.title}</strong>
-                    <small>Assigned to {assigneeSummary(task.assignees)}</small>
-                  </div>
-                  <span className={`task-status ${task.status}`}>{STATUS_LABEL[task.status]}</span>
-                  <span className="quiet" style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    {task.dueDate && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        Due {formatDueDate(task.dueDate)}
-                      </span>
-                    )}
-                    {task.attachments.length > 0 && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        <Paperclip size={13} /> {task.attachments.length}
-                      </span>
-                    )}
-                    {task.comments.length > 0 && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        <MessageSquare size={13} /> {task.comments.length}
-                      </span>
-                    )}
-                  </span>
-                </Link>
-              </motion.div>
-            ))}
-          </motion.section>
-        )}
+        <aside className="card admin-roles-card">
+          <h3>Overview</h3>
+          <p>Status breakdown across the team.</p>
+          {taskCounts ? (
+            FILTERS.filter((f) => f.value !== "all").map((f) => (
+              <div className="admin-role-row" key={f.value}>
+                <span className="admin-role-name">
+                  <span className="admin-role-dot" style={{ background: STATUS_DOT_COLOR[f.value as TaskStatus] }} />
+                  {f.label}
+                </span>
+                <span className="admin-role-count">{taskCounts[f.value as TaskStatus]}</span>
+              </div>
+            ))
+          ) : (
+            <ListShimmer rows={3} />
+          )}
+        </aside>
       </div>
 
       <AnimatePresence>

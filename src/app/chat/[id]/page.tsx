@@ -82,8 +82,10 @@ function colorFor(id: string): string {
 		hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
 	return PALETTE[hash % PALETTE.length];
 }
-function initialsOf(name: string): string {
-	const parts = name.trim().split(/\s+/);
+function initialsOf(name: string | null | undefined): string {
+	const trimmed = (name ?? "").trim();
+	if (!trimmed) return "?";
+	const parts = trimmed.split(/\s+/);
 	return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 function formatTime(iso: string): string {

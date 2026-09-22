@@ -60,8 +60,10 @@ const nav: NavItem[] = [
 	{ href: "/admin", label: "Admin", icon: ShieldCheck, minRole: "admin" },
 ];
 
-function initialsOf(name: string): string {
-	const parts = name.trim().split(/\s+/);
+function initialsOf(name: string | null | undefined): string {
+	const trimmed = (name ?? "").trim();
+	if (!trimmed) return "?";
+	const parts = trimmed.split(/\s+/);
 	return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 

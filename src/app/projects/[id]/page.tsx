@@ -26,13 +26,18 @@ const PRIORITY_LABEL: Record<TaskPriority, string> = {
 };
 
 const AVATAR_PALETTE = ["coral", "blue", "violet", "gold", "green"];
-function colorFor(id: string): string {
+function colorFor(id: string | null | undefined): string {
+  const value = id ?? "";
   let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < value.length; i++) hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
   return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
 }
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/);
+// A task assignee or project member can come back with a blank/missing name — e.g. a user
+// whose account was since removed — so this can't assume a well-formed string.
+function initialsOf(name: string | null | undefined): string {
+  const trimmed = (name ?? "").trim();
+  if (!trimmed) return "?";
+  const parts = trimmed.split(/\s+/);
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
@@ -439,7 +444,7 @@ function ManageMembersDialog({
             <div className="activity-row" key={m.id}>
               <Avatar initials={initialsOf(m.displayName)} color={colorFor(m.id)} size="sm" />
               <div>
-                <strong>{m.displayName}</strong>
+                <strong>{m.displayName || "Unknown member"}</strong>
                 <small>{m.email}</small>
               </div>
               {canManage ? (

@@ -770,7 +770,11 @@ a.metric:hover {
 	background: linear-gradient(135deg, #fff4df, #ffe4ae);
 	color: #bc7923;
 }
-.metric-icon.coral, .metric-icon.blue, .metric-icon.violet, .metric-icon.green, .metric-icon.gold {
+.indigo {
+	background: linear-gradient(135deg, #eeeefc, #e3e2fd);
+	color: var(--accent-deep);
+}
+.metric-icon.coral, .metric-icon.blue, .metric-icon.violet, .metric-icon.green, .metric-icon.gold, .metric-icon.indigo {
 	box-shadow: 0 4px 12px -3px currentColor;
 	opacity: 1;
 }
@@ -2028,6 +2032,58 @@ a.attachment-chip {
 		align-items: stretch;
 	}
 }
+.notifications-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 280px;
+	gap: 18px;
+	align-items: start;
+	max-width: 1200px;
+}
+@media (max-width: 860px) {
+	.notifications-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+.notification-prefs-card h3 {
+	margin: 0 0 4px;
+	font: 700 13px Manrope;
+}
+.notification-prefs-card > p {
+	margin: 0 0 16px;
+	color: var(--muted);
+	font-size: 10px;
+}
+.notification-stats {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 16px;
+}
+.notification-stat {
+	flex: 1;
+	padding: 12px 10px;
+	border-radius: 10px;
+	background: #fafaff;
+	border: 1px solid var(--line);
+	text-align: center;
+}
+.notification-stat strong {
+	display: block;
+	font: 800 20px Manrope;
+	letter-spacing: -0.3px;
+}
+.notification-stat small {
+	color: var(--muted);
+	font-size: 9px;
+}
+.notification-prefs-card .plain.wide {
+	justify-content: center;
+	margin-top: 8px;
+	border: 1px solid var(--line);
+	height: 38px;
+}
+.notification-prefs-card .plain.wide:first-of-type {
+	margin-top: 0;
+}
 .notification-card {
 	padding: 0;
 }
@@ -2045,16 +2101,17 @@ a.attachment-chip {
 	padding: 17px 20px;
 	text-align: left;
 	position: relative;
-	transition: background var(--dur-fast) var(--ease-out);
+	transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 .notification-row:hover {
-	background: #f7faf8;
+	background: #fafaff;
+	transform: translateX(2px);
 }
 .notification-row.unread {
-	background: #fffaf7;
+	background: #f7f7fd;
 }
 .notification-row.unread:hover {
-	background: #fff4ec;
+	background: #f0f0fc;
 }
 .notification-row.unread:before {
 	content: "";
@@ -2063,7 +2120,7 @@ a.attachment-chip {
 	top: 0;
 	bottom: 0;
 	width: 3px;
-	background: var(--accent);
+	background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
 }
 .notification-row > span:nth-child(2) {
 	flex: 1;
@@ -2089,9 +2146,9 @@ a.attachment-chip {
 	animation: unread-dot-pulse 2.2s var(--ease-in-out) infinite;
 }
 @keyframes unread-dot-pulse {
-	0% { box-shadow: 0 0 0 0 rgba(255, 111, 79, 0.5); }
-	70% { box-shadow: 0 0 0 6px rgba(255, 111, 79, 0); }
-	100% { box-shadow: 0 0 0 0 rgba(255, 111, 79, 0); }
+	0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5); }
+	70% { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
+	100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
 }
 .notification-empty {
 	display: flex;
@@ -3413,9 +3470,16 @@ button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offs
 	color: var(--muted);
 }
 .task-attachment-row button:hover { background: #f2f4f0; color: #183e32; }
-.task-status.todo { background: #eef1ee; color: #5b645e; }
+.task-status.todo { background: #eef0f9; color: #565f8f; }
 .task-status.in_progress { background: #fff4df; color: #a26e29; }
 .task-status.done { background: #e6f4ec; color: #1f7a4d; }
+.task-status::before {
+	content: "";
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: currentColor;
+}
 .task-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .task-filters button { border-radius: 20px; padding: 6px 14px; font-size: 11px; font-weight: 600; border: 1px solid var(--line); background: #fff; color: var(--ink); }
 .task-filters button.primary { border-color: transparent; }
@@ -3782,7 +3846,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offs
    markup — added here + on the row markup). */
 a.activity-row.task-row:hover,
 a.task-row:hover {
-	box-shadow: var(--shadow-sm);
+	box-shadow: var(--shadow-sm), inset 3px 0 0 var(--accent);
 	transform: translateY(-2px);
 }
 
@@ -3792,8 +3856,26 @@ a.task-row:hover {
 		border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out),
 		transform var(--dur-fast) var(--ease-out);
 }
+/* .task-filters button (class+element, specificity 0,1,1) was overriding .primary's own
+   background/color (specificity 0,1,0) regardless of source order, so the active filter pill
+   never actually looked active — it just sat there white like the rest. Re-declaring the
+   gradient here at matching specificity fixes it. */
 .task-filters button.primary {
-	box-shadow: var(--shadow-sm);
+	background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+	color: #fff;
+	box-shadow: var(--shadow-glow);
+}
+.tasks-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 280px;
+	gap: 18px;
+	align-items: start;
+	max-width: 1200px;
+}
+@media (max-width: 860px) {
+	.tasks-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }
 
 /* Task detail: status badge swap + priority/due pills get a touch of depth. */

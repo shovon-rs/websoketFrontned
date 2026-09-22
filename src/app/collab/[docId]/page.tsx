@@ -57,8 +57,10 @@ function caretColorFor(id: string): string {
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
   return CARET_PALETTE[hash % CARET_PALETTE.length];
 }
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/);
+function initialsOf(name: string | null | undefined): string {
+  const trimmed = (name ?? "").trim();
+  if (!trimmed) return "?";
+  const parts = trimmed.split(/\s+/);
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 

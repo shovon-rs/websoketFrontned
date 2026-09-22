@@ -12,8 +12,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { UserPlus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/);
+function initialsOf(name: string | null | undefined): string {
+  const trimmed = (name ?? "").trim();
+  if (!trimmed) return "?";
+  const parts = trimmed.split(/\s+/);
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
