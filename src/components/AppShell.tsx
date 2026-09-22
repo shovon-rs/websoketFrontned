@@ -1,6 +1,7 @@
 "use client";
 import * as notificationsApi from "@/lib/api/notifications.api";
 import { useAuth } from "@/lib/auth-context";
+import { notificationDestination } from "@/lib/notification-destination";
 import { hasRole } from "@/lib/roles";
 import type { AppNotification, Role } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
@@ -65,6 +66,47 @@ function initialsOf(name: string | null | undefined): string {
 	if (!trimmed) return "?";
 	const parts = trimmed.split(/\s+/);
 	return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
+
+/** Messenger-style desktop/mobile notification for a socket that's still connected somewhere —
+ * e.g. the user has Relay open in another tab, or this tab just isn't focused — which is exactly
+ * the case dispatchNotification's server-side push fallback deliberately skips (it only queues a
+ * real push once there's no live connection at all). This covers that gap on the client instead:
+ * whenever a notification arrives while the document is hidden/unfocused, fire an OS-level
+ * notification immediately, reusing the same permission the "Enable push" flow already requested. */
+function notifyDesktop(notification: AppNotification, router: ReturnType<typeof useRouter>) {
+	if (typeof window === "undefined" || typeof Notification === "undefined") return;
+	if (Notification.permission !== "granted") return;
+	if (document.hasFocus() && !document.hidden) return;
+
+	const destination = notificationDestination(notification) ?? "/notifications";
+	const options: NotificationOptions & { data?: { url: string } } = {
+		body: notification.body,
+		icon: "/icon.png",
+		tag: notification.id,
+		data: { url: destination },
+	};
+
+	if ("serviceWorker" in navigator) {
+		navigator.serviceWorker.getRegistration().then((registration) => {
+			if (registration) {
+				registration.showNotification(notification.title, options);
+				return;
+			}
+			const shown = new Notification(notification.title, options);
+			shown.onclick = () => {
+				window.focus();
+				router.push(destination);
+			};
+		});
+		return;
+	}
+
+	const shown = new Notification(notification.title, options);
+	shown.onclick = () => {
+		window.focus();
+		router.push(destination);
+	};
 }
 
 export function AppShell({
@@ -219,6 +261,7 @@ export function AppShell({
 		const offNew = subscribe("notification:new", (event) => {
 			const notification = event.payload as AppNotification;
 			if (!notification.readAt) setUnreadNotifications((count) => count + 1);
+			notifyDesktop(notification, router);
 		});
 		const offRead = subscribe("notification:read", () =>
 			setUnreadNotifications((count) => Math.max(0, count - 1)),

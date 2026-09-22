@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import * as notificationsApi from "@/lib/api/notifications.api";
 import { useAuth } from "@/lib/auth-context";
 import { staggerContainer, staggerItem, tapScale } from "@/lib/motion";
+import { notificationDestination } from "@/lib/notification-destination";
 import { isPushSupported, subscribePush } from "@/lib/push";
 import type { AppNotification } from "@/lib/types";
 import { useCountdown } from "@/lib/use-countdown";
@@ -102,18 +103,6 @@ function timeAgo(iso: string): string {
 	return new Date(iso).toLocaleDateString();
 }
 
-function notificationDestination(notification: AppNotification): string | null {
-	const data = notification.data;
-	if (!data) return null;
-	if (typeof data.conversationId === "string") return `/chat/${data.conversationId}`;
-	if (typeof data.callId === "string") return `/call/${data.callId}`;
-	if (typeof data.documentId === "string") return `/collab/${data.documentId}`;
-	if (data.kind === "tracking:shared" || typeof data.sessionId === "string") return "/tracking";
-	if (typeof data.announcementId === "string") return `/live/${data.announcementId}`;
-	if (data.kind === "livestream-request") return "/live";
-	if (typeof data.taskId === "string") return `/tasks/${data.taskId}`;
-	return null;
-}
 
 export default function Notifications() {
 	const router = useRouter();
