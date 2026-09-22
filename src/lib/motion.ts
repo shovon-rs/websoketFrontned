@@ -34,11 +34,17 @@ export const staggerItem: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.32, ease: EASE_OUT } },
 };
 
-/** Per-route page transition — used by AppShell around {children}. */
+/** Per-route page transition — used by AppShell around {children}. AppShell fully remounts on
+ * every navigation (it's instantiated per-page, not a persistent layout), so only the enter side
+ * of this ever plays — there's no previous instance left alive to run an exit animation on. */
 export const pageTransition: Variants = {
-  initial: { opacity: 0, y: 10 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.32, ease: EASE_OUT } },
-  exit: { opacity: 0, y: -6, transition: { duration: 0.16, ease: EASE_IN_OUT } },
+  initial: { opacity: 0, y: 18, scale: 0.985 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.45, ease: EASE_OUT },
+  },
 };
 
 /** Modal/dialog backdrop + panel pair — consistent open/close feel for every share/confirm/etc

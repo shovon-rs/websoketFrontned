@@ -140,6 +140,10 @@ export function AppShell({
 	const [inviteError, setInviteError] = useState<string | null>(null);
 	const [userMenuOpen, setUserMenuOpen] = useState(false);
 	const userMenuRef = useRef<HTMLDivElement>(null);
+	// Clicking a nav item highlights it immediately (springing the pill over via layoutId) and
+	// only actually navigates a beat later, so the selection animation has time to play instead
+	// of being cut off by AppShell unmounting for the new route.
+	const [pendingNav, setPendingNav] = useState<string | null>(null);
 	// Registration is open — there's no invite-token system, so "inviting" someone just
 	// means sharing the signup link; anyone with it can create their own account.
 	const inviteLink =
@@ -362,14 +366,40 @@ export function AppShell({
 				<button ref={menuToggleRef} className="mobile-menu-toggle" type="button" aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} aria-controls="workspace-nav workspace-account" onClick={() => setMenuOpen((open) => !open)}>
 					{menuOpen ? <X size={22} /> : <Menu size={22} />}
 				</button>
-				<nav className="nav" id="workspace-nav" aria-label="Workspace" onClick={() => setMenuOpen(false)}>
+				<nav
+					className="nav"
+					id="workspace-nav"
+					aria-label="Workspace"
+					onClick={() => setMenuOpen(false)}
+				>
 					<p className="nav-label">Workspace</p>
 					{nav
 						.filter((item) => hasRole(user.role, item.minRole ?? "user"))
 						.map(({ href, label, icon: Icon }) => {
-							const active = path.startsWith(href.split("/").slice(0, 2).join("/"));
+							const active = pendingNav
+								? pendingNav === href
+								: path.startsWith(href.split("/").slice(0, 2).join("/"));
 							return (
-								<Link key={href} href={href} className={active ? "active" : ""}>
+								<Link
+									key={href}
+									href={href}
+									className={active ? "active" : ""}
+									onClick={(event) => {
+										if (
+											event.defaultPrevented ||
+											event.metaKey ||
+											event.ctrlKey ||
+											event.shiftKey ||
+											event.altKey ||
+											event.button !== 0
+										)
+											return;
+										if (active) return;
+										event.preventDefault();
+										setPendingNav(href);
+										window.setTimeout(() => router.push(href), 220);
+									}}
+								>
 									{active && (
 										<motion.span
 											className="nav-active"
@@ -489,18 +519,15 @@ export function AppShell({
 						</Link>
 					</div>
 				</header>
-				<AnimatePresence mode="wait" initial={false}>
-					<motion.div
-						className="shell-content"
-						key={path}
-						variants={pageTransition}
-						initial="initial"
-						animate="animate"
-						exit="exit"
-					>
-						{children}
-					</motion.div>
-				</AnimatePresence>
+				<motion.div
+					className="shell-content"
+					key={path}
+					variants={pageTransition}
+					initial="initial"
+					animate="animate"
+				>
+					{children}
+				</motion.div>
 			</main>
 			<AnimatePresence>
 			{searchOpen && (

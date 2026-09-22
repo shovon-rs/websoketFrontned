@@ -347,6 +347,14 @@ button:active {
 	text-align: left;
 	cursor: pointer;
 	font-family: inherit;
+	transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out),
+		transform var(--dur-fast) var(--ease-out);
+}
+.nav a:active,
+.sidebar-bottom > a:active,
+.sidebar-bottom > button:active,
+.user-card:active {
+	transform: scale(0.98);
 }
 .nav a svg, .sidebar-bottom > a svg, .sidebar-bottom > button svg, .user-card svg {
 	position: relative;
@@ -379,6 +387,7 @@ button:active {
 	position: absolute;
 	inset: 0;
 	border-radius: 9px;
+	z-index: 0;
 	background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
 	box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
 }
