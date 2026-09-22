@@ -231,7 +231,7 @@ export type IceServer = {
 
 export type ConnectionStatus = "connecting" | "connected" | "reconnecting" | "disconnected";
 
-export type TaskStatus = "todo" | "in_progress" | "done";
+export type TaskStatus = "new" | "in_progress" | "ready_for_qa" | "testing" | "done";
 
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 
@@ -285,7 +285,14 @@ export type Task = {
 
 export type ProjectRole = "admin" | "member";
 
-export type ProjectMember = { id: string; displayName: string; email: string; role: ProjectRole };
+// Mirrors ConversationMember's shape: the membership row's own id, plus the nested user it
+// points at — the backend never flattens the user's fields onto the membership row itself.
+export type ProjectMember = {
+  id: string;
+  userId: string;
+  role: ProjectRole;
+  user: { id: string; displayName: string; email: string };
+};
 
 export type Section = { id: string; projectId: string; name: string; order: number };
 

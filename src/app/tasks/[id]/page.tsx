@@ -4,21 +4,24 @@ import { Avatar } from "@/components/Avatar";
 import { PageShimmer } from "@/components/Shimmer";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ApiError } from "@/lib/api-client";
+import * as projectsApi from "@/lib/api/projects.api";
 import * as tasksApi from "@/lib/api/tasks.api";
 import { useAuth } from "@/lib/auth-context";
 import { dialogBackdrop, dialogPanel, staggerContainer, staggerItem } from "@/lib/motion";
 import { isManager } from "@/lib/roles";
 import { formatDueDate, toDateTimeLocalValue } from "@/lib/time";
-import type { Task, TaskAttachment, TaskPriority, TaskStatus, User } from "@/lib/types";
+import type { Project, Task, TaskAttachment, TaskPriority, TaskStatus, User } from "@/lib/types";
 import { useWs } from "@/lib/ws-context";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, FileText, Paperclip, Pencil, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
-  todo: "To do",
+  new: "New",
   in_progress: "In progress",
+  ready_for_qa: "Ready for QA",
+  testing: "Testing",
   done: "Done",
 };
 
@@ -49,6 +52,7 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
   const { user } = useAuth();
   const { subscribe } = useWs();
   const [task, setTask] = useState<Task | null>(null);
+  const [taskProject, setTaskProject] = useState<Project | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,7 +83,23 @@ export default function TaskDetail({ params }: { params: { id: string } }) {
     });
   }, [subscribe, params.id]);
 
-  const canManage = isManager(user?.role);
+  // Editing/deleting a task is allowed for manager+ or that task's project admins (mirrors the
+  // backend's assertCanMutate rule) — global-role-only used to hide Edit entirely for a project
+  // admin whose own role was just "user", even though the server would have accepted their edit.
+  const projectId = task?.projectId ?? null;
+  useEffect(() => {
+    if (!projectId) {
+      setTaskProject(null);
+      return;
+    }
+    projectsApi.getProject(projectId).then(setTaskProject).catch(() => setTaskProject(null));
+  }, [projectId]);
+
+  const canManage = useMemo(() => {
+    if (isManager(user?.role)) return true;
+    if (!user || !taskProject) return false;
+    return taskProject.members.some((m) => m.userId === user.id && m.role === "admin");
+  }, [user, taskProject]);
 
   async function onStatusChange(status: TaskStatus) {
     if (!task) return;

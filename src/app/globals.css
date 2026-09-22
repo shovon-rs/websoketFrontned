@@ -282,6 +282,40 @@ button:active {
 }
 .nav {
 	margin-top: 42px;
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	/* A couple of px of side padding so the active pill's box-shadow doesn't get clipped by the
+	   scroll container, plus matching negative margin so it doesn't shift the row content. */
+	padding: 0 2px;
+	margin-left: -2px;
+	margin-right: -2px;
+	width: calc(100% + 4px);
+	/* Thin, on-brand scrollbar instead of the default fat OS-grey one, which read as a stray UI
+	   glitch sitting on top of the indigo sidebar. */
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+.nav::-webkit-scrollbar {
+	width: 5px;
+}
+.nav::-webkit-scrollbar-track {
+	background: transparent;
+}
+.nav::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.18);
+	border-radius: 3px;
+}
+.nav::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.32);
+}
+.brand,
+.mobile-menu-toggle {
+	flex: none;
+}
+.sidebar-bottom {
+	flex: none;
 }
 .nav-label {
 	text-transform: uppercase;
@@ -3316,7 +3350,7 @@ a.attachment-chip {
 }
 /* Let content shrink inside flex/grid tracks, including long names and URLs. */
 .app-shell { grid-template-columns: 236px minmax(0, 1fr); }
-.sidebar { height: 100dvh; overflow-y: auto; }
+.sidebar { height: 100dvh; overflow: hidden; }
 .chat-layout { grid-template-columns: 310px minmax(0, 1fr); }
 .card, .metric, .card-head > div, .activity-row > div,
 .topbar > div, .user-search, .user-multiselect, .selected-recipient > div,
@@ -3552,8 +3586,10 @@ button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offs
 	color: var(--muted);
 }
 .task-attachment-row button:hover { background: #f2f4f0; color: #183e32; }
-.task-status.todo { background: #eef0f9; color: #565f8f; }
+.task-status.new { background: #eef0f9; color: #565f8f; }
 .task-status.in_progress { background: #fff4df; color: #a26e29; }
+.task-status.ready_for_qa { background: #f2e9ff; color: #7a4fb0; }
+.task-status.testing { background: #e3f0ff; color: #2f6cb0; }
 .task-status.done { background: #e6f4ec; color: #1f7a4d; }
 .task-status::before {
 	content: "";
@@ -3573,6 +3609,34 @@ button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offs
 .task-comment p { margin: 0; font-size: 12px; white-space: pre-wrap; }
 
 /* Projects */
+.projects-grid-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; max-width: 1400px; }
+@media (max-width: 960px) {
+	.projects-grid-layout { grid-template-columns: minmax(0, 1fr); }
+}
+.project-tasks-card { display: flex; flex-direction: column; }
+.project-tasks-sort { width: 100%; justify-content: space-between; margin-bottom: 14px; }
+.project-tasks-sort button { flex: 1; justify-content: center; }
+.project-tasks-list { flex: 1; min-height: 0; max-height: calc(100vh - 300px); overflow-y: auto; }
+.project-tasks-empty { padding: 30px 4px; text-align: center; }
+.project-task-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 4px;
+	border-bottom: 1px solid #f1f2fa;
+	text-decoration: none;
+	color: inherit;
+	border-radius: 8px;
+	transition: background var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+.project-task-row:last-child { border-bottom: 0; }
+.project-task-row:hover { background: #fafaff; transform: translateX(2px); }
+.project-task-row .color-dot { width: 8px; height: 8px; flex: none; }
+.project-task-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.project-task-row-main strong { font-size: 11.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-task-row-main small { font-size: 9px; color: var(--muted); }
+.project-task-row .task-status { flex: none; }
+.project-task-row-time { flex: none; font-size: 9px; color: var(--muted); white-space: nowrap; }
 .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
 .project-card { display: block; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 18px; text-decoration: none; color: inherit; transition: border-color 150ms ease, box-shadow 150ms ease; }
 .project-card:hover { border-color: #d7dbd4; box-shadow: 0 4px 14px rgba(23, 35, 30, 0.06); }

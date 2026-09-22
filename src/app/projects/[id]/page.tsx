@@ -87,7 +87,7 @@ export default function ProjectBoardPage({ params }: { params: { id: string } })
   const canManage = useMemo(() => {
     if (!project || !user) return false;
     if (isManager(user.role)) return true;
-    return project.members.some((m) => m.id === user.id && m.role === "admin");
+    return project.members.some((m) => m.userId === user.id && m.role === "admin");
   }, [project, user]);
 
   const tasksBySection = useMemo(() => {
@@ -359,14 +359,22 @@ function ManageMembersDialog({
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   async function onAdd(user: User) {
-    if (project.members.some((m) => m.id === user.id)) return;
+    if (project.members.some((m) => m.userId === user.id)) return;
     setError(null);
     setPendingId(user.id);
     try {
       await projectsApi.addMember(project.id, user.id, "member");
       onUpdated({
         ...project,
-        members: [...project.members, { id: user.id, displayName: user.displayName, email: user.email, role: "member" }],
+        members: [
+          ...project.members,
+          {
+            id: user.id,
+            userId: user.id,
+            role: "member",
+            user: { id: user.id, displayName: user.displayName, email: user.email },
+          },
+        ],
       });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not add that member.");
@@ -375,14 +383,14 @@ function ManageMembersDialog({
     }
   }
 
-  async function onRoleChange(memberId: string, role: ProjectRole) {
+  async function onRoleChange(userId: string, role: ProjectRole) {
     setError(null);
-    setPendingId(memberId);
+    setPendingId(userId);
     try {
-      await projectsApi.updateMemberRole(project.id, memberId, role);
+      await projectsApi.updateMemberRole(project.id, userId, role);
       onUpdated({
         ...project,
-        members: project.members.map((m) => (m.id === memberId ? { ...m, role } : m)),
+        members: project.members.map((m) => (m.userId === userId ? { ...m, role } : m)),
       });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not change that member's role.");
@@ -391,12 +399,12 @@ function ManageMembersDialog({
     }
   }
 
-  async function onRemove(memberId: string) {
+  async function onRemove(userId: string) {
     setError(null);
-    setPendingId(memberId);
+    setPendingId(userId);
     try {
-      await projectsApi.removeMember(project.id, memberId);
-      onUpdated({ ...project, members: project.members.filter((m) => m.id !== memberId) });
+      await projectsApi.removeMember(project.id, userId);
+      onUpdated({ ...project, members: project.members.filter((m) => m.userId !== userId) });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not remove that member.");
     } finally {
@@ -442,23 +450,23 @@ function ManageMembersDialog({
         <div style={{ marginTop: 8 }}>
           {project.members.map((m) => (
             <div className="activity-row" key={m.id}>
-              <Avatar initials={initialsOf(m.displayName)} color={colorFor(m.id)} size="sm" />
+              <Avatar initials={initialsOf(m.user.displayName)} color={colorFor(m.userId)} size="sm" />
               <div>
-                <strong>{m.displayName || "Unknown member"}</strong>
-                <small>{m.email}</small>
+                <strong>{m.user.displayName || "Unknown member"}</strong>
+                <small>{m.user.email}</small>
               </div>
               {canManage ? (
                 <>
                   <select
                     className="role-select"
                     value={m.role}
-                    disabled={pendingId === m.id}
-                    onChange={(e) => onRoleChange(m.id, e.target.value as ProjectRole)}
+                    disabled={pendingId === m.userId}
+                    onChange={(e) => onRoleChange(m.userId, e.target.value as ProjectRole)}
                   >
                     <option value="member">Member</option>
                     <option value="admin">Admin</option>
                   </select>
-                  <button className="danger small" disabled={pendingId === m.id} onClick={() => onRemove(m.id)}>
+                  <button className="danger small" disabled={pendingId === m.userId} onClick={() => onRemove(m.userId)}>
                     Remove
                   </button>
                 </>

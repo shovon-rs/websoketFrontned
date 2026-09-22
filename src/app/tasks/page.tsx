@@ -17,15 +17,19 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
-  todo: "To do",
+  new: "New",
   in_progress: "In progress",
+  ready_for_qa: "Ready for QA",
+  testing: "Testing",
   done: "Done",
 };
 
 const FILTERS: { value: TaskStatus | "all"; label: string }[] = [
   { value: "all", label: "All" },
-  { value: "todo", label: "To do" },
+  { value: "new", label: "New" },
   { value: "in_progress", label: "In progress" },
+  { value: "ready_for_qa", label: "Ready for QA" },
+  { value: "testing", label: "Testing" },
   { value: "done", label: "Done" },
 ];
 
@@ -46,8 +50,10 @@ function assigneeSummary(people: TaskPerson[]): string {
 const TASK_NOTIFICATION_KINDS = new Set(["task:assigned", "task:status-changed", "task:comment-new"]);
 
 const STATUS_DOT_COLOR: Record<TaskStatus, string> = {
-  todo: "#7a83c4",
+  new: "#7a83c4",
   in_progress: "#e3a23c",
+  ready_for_qa: "#a95fd1",
+  testing: "#3a8fd8",
   done: "#2f9663",
 };
 
@@ -74,8 +80,10 @@ export default function TasksPage() {
       .listTasks()
       .then((all) => {
         setTaskCounts({
-          todo: all.filter((t) => t.status === "todo").length,
+          new: all.filter((t) => t.status === "new").length,
           in_progress: all.filter((t) => t.status === "in_progress").length,
+          ready_for_qa: all.filter((t) => t.status === "ready_for_qa").length,
+          testing: all.filter((t) => t.status === "testing").length,
           done: all.filter((t) => t.status === "done").length,
         });
       })
@@ -208,7 +216,7 @@ const MAX_ATTACHMENTS = 10;
 
 function CreateTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (task: Task) => void }) {
   const [assignees, setAssignees] = useState<User[]>([]);
-  const [status, setStatus] = useState<TaskStatus>("todo");
+  const [status, setStatus] = useState<TaskStatus>("new");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -326,8 +334,10 @@ function CreateTaskDialog({ onClose, onCreated }: { onClose: () => void; onCreat
           <label>
             Status
             <select className="role-select" value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
-              <option value="todo">To do</option>
+              <option value="new">New</option>
               <option value="in_progress">In progress</option>
+              <option value="ready_for_qa">Ready for QA</option>
+              <option value="testing">Testing</option>
               <option value="done">Done</option>
             </select>
           </label>
