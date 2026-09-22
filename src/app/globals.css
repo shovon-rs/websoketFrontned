@@ -3916,6 +3916,11 @@ button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offs
 	gap: 3px;
 }
 
+.delivered.seen {
+	color: var(--accent);
+	font-weight: 600;
+}
+
 /* Call room: smoother control-button state transitions (mute/camera/screen-share fill). */
 .call-controls button {
 	transition: background var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-spring),

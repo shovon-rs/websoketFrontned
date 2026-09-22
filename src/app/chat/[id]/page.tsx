@@ -203,6 +203,28 @@ export default function ChatConversation({
 		if (wsStatus === "connected") send("chat:join", { conversationId });
 	}, [wsStatus, conversationId, send]);
 
+	// Mark the open thread read whenever it's actually being looked at: on open/reconnect while
+	// focused, and again whenever the tab regains focus while this thread is still active.
+	useEffect(() => {
+		if (!conversationId || wsStatus !== "connected") return;
+		if (typeof document === "undefined" || document.hidden || !document.hasFocus()) return;
+		send("conversation:read", { conversationId });
+	}, [conversationId, wsStatus, send]);
+
+	useEffect(() => {
+		function onFocus() {
+			if (conversationId && wsStatus === "connected") {
+				send("conversation:read", { conversationId });
+			}
+		}
+		window.addEventListener("focus", onFocus);
+		document.addEventListener("visibilitychange", onFocus);
+		return () => {
+			window.removeEventListener("focus", onFocus);
+			document.removeEventListener("visibilitychange", onFocus);
+		};
+	}, [conversationId, wsStatus, send]);
+
 	// Reconnect catch-up: fetch anything sent while the socket was down.
 	const prevStatusRef = useRef(wsStatus);
 	useEffect(() => {
@@ -272,6 +294,9 @@ export default function ChatConversation({
 
 			if (payload.senderId !== user?.id) {
 				send("message:ack", { eventId: event.eventId });
+				if (!document.hidden && document.hasFocus()) {
+					send("conversation:read", { conversationId });
+				}
 			}
 		});
 
@@ -315,10 +340,31 @@ export default function ChatConversation({
 			});
 		});
 
+		const offRead = subscribe("message:read", (event) => {
+			const payload = event.payload as {
+				conversationId: string;
+				userId: string;
+				lastReadAt: string;
+			};
+			if (payload.conversationId !== conversationId || payload.userId === user?.id) return;
+			const readAt = new Date(payload.lastReadAt).getTime();
+			setMessages((prev) =>
+				prev.map((m) =>
+					m.senderId === user?.id &&
+					m.status !== "sending" &&
+					m.status !== "failed" &&
+					new Date(m.createdAt).getTime() <= readAt
+						? { ...m, status: "read" }
+						: m,
+				),
+			);
+		});
+
 		return () => {
 			offNew();
 			offTypingStart();
 			offTypingStop();
+			offRead();
 		};
 	}, [conversationId, subscribe, send, user]);
 
@@ -903,7 +949,7 @@ export default function ChatConversation({
 										{mine && (
 											<AnimatePresence mode="wait" initial={false}>
 												<motion.small
-													className="delivered"
+													className={`delivered${m.status === "read" ? " seen" : ""}`}
 													key={m.status}
 													initial={{ opacity: 0, scale: 0.9 }}
 													animate={{ opacity: 1, scale: 1 }}
@@ -913,7 +959,9 @@ export default function ChatConversation({
 														? "Sending…"
 														: m.status === "failed"
 															? "Failed to send"
-															: "Delivered ✓"}
+															: m.status === "read"
+																? "Seen ✓✓"
+																: "Delivered ✓"}
 												</motion.small>
 											</AnimatePresence>
 										)}
