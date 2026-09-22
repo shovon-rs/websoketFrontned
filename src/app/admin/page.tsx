@@ -47,21 +47,21 @@ function AdminPageContent() {
 
   return (
     <AppShell title="Admin" subtitle="Manage users, announcements, and live-stream requests.">
-      <div className={tab === "live-locations" ? "page" : "page narrow"}>
-        <div className="admin-tabs">
-          <button className={tab === "users" ? "primary" : "plain"} onClick={() => setTab("users")}>Users</button>
+      <div className={tab === "live-locations" ? "page" : tab === "users" ? "page admin-page" : "page narrow"}>
+        <div className="admin-tabs" role="tablist" aria-label="Admin sections">
+          <button role="tab" aria-selected={tab === "users"} className={tab === "users" ? "active" : ""} onClick={() => setTab("users")}>Users</button>
           {canManageAnnouncements && (
-            <button className={tab === "announcements" ? "primary" : "plain"} onClick={() => setTab("announcements")}>
+            <button role="tab" aria-selected={tab === "announcements"} className={tab === "announcements" ? "active" : ""} onClick={() => setTab("announcements")}>
               Announcements
             </button>
           )}
           {canManageAnnouncements && (
-            <button className={tab === "live-requests" ? "primary" : "plain"} onClick={() => setTab("live-requests")}>
+            <button role="tab" aria-selected={tab === "live-requests"} className={tab === "live-requests" ? "active" : ""} onClick={() => setTab("live-requests")}>
               Live requests
             </button>
           )}
           {canManageAnnouncements && (
-            <button className={tab === "live-locations" ? "primary" : "plain"} onClick={() => setTab("live-locations")}>
+            <button role="tab" aria-selected={tab === "live-locations"} className={tab === "live-locations" ? "active" : ""} onClick={() => setTab("live-locations")}>
               Live locations
             </button>
           )}

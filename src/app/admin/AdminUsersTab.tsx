@@ -67,62 +67,96 @@ export function AdminUsersTab({ actingRole, currentUserId }: { actingRole: Role;
     }
   }
 
-  if (!users) return <section className="card"><ListShimmer rows={6} /></section>;
+  if (!users) {
+    return (
+      <div className="admin-users-grid">
+        <section className="card"><ListShimmer rows={6} /></section>
+        <aside className="card admin-roles-card"><ListShimmer rows={4} /></aside>
+      </div>
+    );
+  }
+
+  const ROLE_DOT_COLOR: Record<Role, string> = {
+    user: "#8b93f5",
+    manager: "#e3a23c",
+    admin: "#4b8fe0",
+    super_admin: "#e35e40",
+  };
+  const roleCounts = ALL_ROLE_OPTIONS.map((o) => ({
+    ...o,
+    count: users.filter((u) => (u.role ?? "user") === o.value).length,
+  }));
 
   return (
-    <section className="card">
-      <div className="card-head">
-        <div><h3>All users — {users.length}</h3><p>Change a user's role below.</p></div>
-        <button className="primary" onClick={() => setCreateOpen(true)}>
-          <UserPlus size={16} /> Create user
-        </button>
-      </div>
-      {error && <p className="auth-error" role="alert">{error}</p>}
-      <motion.div variants={staggerContainer} initial="hidden" animate="visible">
-        {users.map((u) => {
-          const isSelf = u.id === currentUserId;
-          const targetIsSuperAdmin = u.role === "super_admin";
-          // An admin (not super_admin) may never act on an existing super_admin row at all.
-          const roleActionsDisabled = isSelf || pendingId === u.id || (targetIsSuperAdmin && actingRole !== "super_admin");
-          // Deleting is reserved for super_admin, and a super_admin may never delete another super_admin.
-          const canDelete = isSuperAdmin(actingRole) && !isSelf && !targetIsSuperAdmin;
+    <div className="admin-users-grid">
+      <section className="card">
+        <div className="card-head">
+          <div><h3>All users — {users.length}</h3><p>Change a user's role below.</p></div>
+          <button className="primary" onClick={() => setCreateOpen(true)}>
+            <UserPlus size={16} /> Create user
+          </button>
+        </div>
+        {error && <p className="auth-error" role="alert">{error}</p>}
+        <motion.div variants={staggerContainer} initial="hidden" animate="visible">
+          {users.map((u) => {
+            const isSelf = u.id === currentUserId;
+            const targetIsSuperAdmin = u.role === "super_admin";
+            // An admin (not super_admin) may never act on an existing super_admin row at all.
+            const roleActionsDisabled = isSelf || pendingId === u.id || (targetIsSuperAdmin && actingRole !== "super_admin");
+            // Deleting is reserved for super_admin, and a super_admin may never delete another super_admin.
+            const canDelete = isSuperAdmin(actingRole) && !isSelf && !targetIsSuperAdmin;
 
-          return (
-            <motion.div className="activity-row row-hover" key={u.id} variants={staggerItem} layout>
-              <Avatar initials={initialsOf(u.displayName)} color="blue" size="sm" src={u.avatarUrl} />
-              <div>
-                <strong>{u.displayName}{isSelf ? " (you)" : ""}</strong>
-                <small>{u.email}</small>
-              </div>
-              <select
-                className="role-select"
-                value={u.role ?? "user"}
-                disabled={roleActionsDisabled}
-                onChange={(e) => onRoleChange(u, e.target.value as Role)}
-              >
-                {/* Granting super_admin is reserved for an existing super_admin — the option is
-                    still listed (so a super_admin row always has a matching <option>) but
-                    disabled as a *new* choice for a plain admin actor. */}
-                {ALL_ROLE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value} disabled={o.value === "super_admin" && actingRole !== "super_admin"}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-              {canDelete && (
-                <button
-                  className="danger small"
-                  disabled={pendingId === u.id}
-                  onClick={() => setDeleteTarget(u)}
-                  title={`Delete ${u.displayName}`}
+            return (
+              <motion.div className="activity-row row-hover admin-user-row" key={u.id} variants={staggerItem} layout>
+                <Avatar initials={initialsOf(u.displayName)} color="blue" size="sm" src={u.avatarUrl} />
+                <div>
+                  <strong>{u.displayName}{isSelf ? " (you)" : ""}</strong>
+                  <small>{u.email}</small>
+                </div>
+                <select
+                  className="role-select"
+                  value={u.role ?? "user"}
+                  disabled={roleActionsDisabled}
+                  onChange={(e) => onRoleChange(u, e.target.value as Role)}
                 >
-                  Delete
-                </button>
-              )}
-            </motion.div>
-          );
-        })}
-      </motion.div>
+                  {/* Granting super_admin is reserved for an existing super_admin — the option is
+                      still listed (so a super_admin row always has a matching <option>) but
+                      disabled as a *new* choice for a plain admin actor. */}
+                  {ALL_ROLE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value} disabled={o.value === "super_admin" && actingRole !== "super_admin"}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                {canDelete && (
+                  <button
+                    className="danger small"
+                    disabled={pendingId === u.id}
+                    onClick={() => setDeleteTarget(u)}
+                    title={`Delete ${u.displayName}`}
+                  >
+                    Delete
+                  </button>
+                )}
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </section>
+
+      <aside className="card admin-roles-card">
+        <h3>Workspace roles</h3>
+        <p>How the {users.length} {users.length === 1 ? "member is" : "members are"} distributed.</p>
+        {roleCounts.map((r) => (
+          <div className="admin-role-row" key={r.value}>
+            <span className="admin-role-name">
+              <span className="admin-role-dot" style={{ background: ROLE_DOT_COLOR[r.value] }} />
+              {r.label}
+            </span>
+            <span className="admin-role-count">{r.count}</span>
+          </div>
+        ))}
+      </aside>
 
       <AnimatePresence>
         {createOpen && (
@@ -180,7 +214,7 @@ export function AdminUsersTab({ actingRole, currentUserId }: { actingRole: Role;
           </motion.div>
         )}
       </AnimatePresence>
-    </section>
+    </div>
   );
 }
 
