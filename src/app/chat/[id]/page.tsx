@@ -125,6 +125,7 @@ export default function ChatConversation({
 	const lastEventIdRef = useRef<string | undefined>(undefined);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
+	const messagesContainerRef = useRef<HTMLDivElement>(null);
 	const typingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
 		new Map(),
 	);
@@ -529,10 +530,29 @@ export default function ChatConversation({
 			)
 		: regularMessages;
 
+	// Jump the message pane itself to its bottom (not scrollIntoView, which walks every
+	// scrollable ancestor and can land short of the true bottom in a nested flex layout like
+	// this one — setting scrollTop directly on the actual scrolling element is unambiguous).
 	useLayoutEffect(() => {
-		if (!normalizedSearch)
-			messagesEndRef.current?.scrollIntoView({ block: "end" });
-	}, [messages, typingNames.length, normalizedSearch]);
+		if (normalizedSearch) return;
+		const el = messagesContainerRef.current;
+		if (!el) return;
+		el.scrollTop = el.scrollHeight;
+	}, [conversationId, messages, typingNames.length, normalizedSearch]);
+
+	// Attachments/images inside messages load asynchronously and can grow the container after
+	// the layout effect above already ran — nudge back to bottom once more shortly after mount
+	// and after the message list changes, matching Messenger/WhatsApp's behavior of always
+	// opening a thread already at its newest message.
+	useEffect(() => {
+		if (normalizedSearch) return;
+		const el = messagesContainerRef.current;
+		if (!el) return;
+		const timer = window.setTimeout(() => {
+			el.scrollTop = el.scrollHeight;
+		}, 120);
+		return () => window.clearTimeout(timer);
+	}, [conversationId, messages, normalizedSearch]);
 
 	return (
 		<AppShell title="Messages">
@@ -702,7 +722,7 @@ export default function ChatConversation({
 						</motion.div>
 					)}
 					</AnimatePresence>
-					<div className="messages">
+					<div className="messages" ref={messagesContainerRef}>
 						{normalizedSearch && visibleMessages.length === 0 && (
 							<p className="message-search-empty">
 								No messages match &ldquo;{messageSearch.trim()}&rdquo;.

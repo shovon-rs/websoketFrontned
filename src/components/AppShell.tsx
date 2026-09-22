@@ -15,6 +15,7 @@ import {
 	Copy,
 	FolderKanban,
 	LayoutDashboard,
+	LogOut,
 	MapPin,
 	Menu,
 	MessageCircle,
@@ -93,6 +94,8 @@ export function AppShell({
 	const [inviteOpen, setInviteOpen] = useState(false);
 	const [inviteCopied, setInviteCopied] = useState(false);
 	const [inviteError, setInviteError] = useState<string | null>(null);
+	const [userMenuOpen, setUserMenuOpen] = useState(false);
+	const userMenuRef = useRef<HTMLDivElement>(null);
 	// Registration is open — there's no invite-token system, so "inviting" someone just
 	// means sharing the signup link; anyone with it can create their own account.
 	const inviteLink =
@@ -123,7 +126,19 @@ export function AppShell({
 
 	useEffect(() => {
 		setMenuOpen(false);
+		setUserMenuOpen(false);
 	}, [path]);
+
+	useEffect(() => {
+		if (!userMenuOpen) return undefined;
+		function onClickOutside(event: MouseEvent) {
+			if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+				setUserMenuOpen(false);
+			}
+		}
+		document.addEventListener("mousedown", onClickOutside);
+		return () => document.removeEventListener("mousedown", onClickOutside);
+	}, [userMenuOpen]);
 
 	useEffect(() => {
 		if (menuOpen) {
@@ -229,6 +244,7 @@ export function AppShell({
 			if (event.key === "Escape") {
 				setSearchOpen(false);
 				setMenuOpen(false);
+				setUserMenuOpen(false);
 			}
 		}
 		window.addEventListener("keydown", onShortcut);
@@ -305,20 +321,22 @@ export function AppShell({
 					<p className="nav-label">Workspace</p>
 					{nav
 						.filter((item) => hasRole(user.role, item.minRole ?? "user"))
-						.map(({ href, label, icon: Icon }) => (
-							<Link
-								key={href}
-								href={href}
-								className={
-									path.startsWith(href.split("/").slice(0, 2).join("/"))
-										? "active"
-										: ""
-								}
-							>
-								<Icon size={19} />
-								<span>{label}</span>
-							</Link>
-						))}
+						.map(({ href, label, icon: Icon }) => {
+							const active = path.startsWith(href.split("/").slice(0, 2).join("/"));
+							return (
+								<Link key={href} href={href} className={active ? "active" : ""}>
+									{active && (
+										<motion.span
+											className="nav-active"
+											layoutId="nav-active"
+											transition={{ type: "spring", stiffness: 420, damping: 34 }}
+										/>
+									)}
+									<Icon size={19} />
+									<span>{label}</span>
+								</Link>
+							);
+						})}
 				</nav>
 				<div className="sidebar-bottom" id="workspace-account" onClick={() => setMenuOpen(false)}>
 					<button
@@ -331,29 +349,57 @@ export function AppShell({
 					>
 						<Users size={19} /> Invite people
 					</button>
-					<Link
-						href="/settings"
-						className={path.startsWith("/settings") ? "active" : ""}
-					>
-						<Settings size={19} /> Settings
-					</Link>
-					<button
-						className="user-card"
-						onClick={() => logout().then(() => router.replace("/login"))}
-						title="Sign out"
-					>
-						<Avatar
-							initials={initialsOf(user.displayName)}
-							color="green"
-							online
-							src={user.avatarUrl}
-						/>
-						<div>
-							<strong>{user.displayName}</strong>
-							<small>{user.email}</small>
-						</div>
-						<ChevronDown size={16} />
-					</button>
+					<div className="user-menu" ref={userMenuRef} onClick={(event) => event.stopPropagation()}>
+						<button
+							type="button"
+							className={`user-card${userMenuOpen ? " open" : ""}`}
+							onClick={() => setUserMenuOpen((open) => !open)}
+							aria-haspopup="menu"
+							aria-expanded={userMenuOpen}
+						>
+							<Avatar
+								initials={initialsOf(user.displayName)}
+								color="indigo"
+								online
+								src={user.avatarUrl}
+							/>
+							<div>
+								<strong>{user.displayName}</strong>
+								<small>{user.email}</small>
+							</div>
+							<ChevronDown size={16} />
+						</button>
+						<AnimatePresence>
+							{userMenuOpen && (
+								<motion.div
+									className="user-dropdown"
+									role="menu"
+									variants={dialogPanel}
+									initial="hidden"
+									animate="visible"
+									exit="exit"
+								>
+									<Link
+										href="/settings"
+										role="menuitem"
+										onClick={() => {
+											setUserMenuOpen(false);
+											setMenuOpen(false);
+										}}
+									>
+										<Settings size={16} /> Settings
+									</Link>
+									<button
+										type="button"
+										role="menuitem"
+										onClick={() => logout().then(() => router.replace("/login"))}
+									>
+										<LogOut size={16} /> Sign out
+									</button>
+								</motion.div>
+							)}
+						</AnimatePresence>
+					</div>
 				</div>
 			</aside>
 			<main ref={mainRef} className="main">
@@ -400,6 +446,7 @@ export function AppShell({
 				</header>
 				<AnimatePresence mode="wait" initial={false}>
 					<motion.div
+						className="shell-content"
 						key={path}
 						variants={pageTransition}
 						initial="initial"

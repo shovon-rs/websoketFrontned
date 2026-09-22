@@ -2,7 +2,8 @@ import { apiRequest } from "../api-client";
 import type { Project, ProjectRole, ProjectSummary, Section } from "../types";
 
 export async function listProjects() {
-  return apiRequest<ProjectSummary[]>("/projects");
+  const data = await apiRequest<{ projects: ProjectSummary[] }>("/projects");
+  return data.projects;
 }
 
 export async function createProject(input: { name: string; description?: string; color?: string }) {

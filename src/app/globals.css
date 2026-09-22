@@ -1,25 +1,28 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap");
 :root {
-	--ink: #17231e;
-	--muted: #77817c;
-	--line: #e8ebe7;
-	--bg: #f7f8f5;
+	--ink: #181a2a;
+	--muted: #74758b;
+	--line: #e7e7f1;
+	--bg: #f6f6fb;
 	--white: #fff;
-	--green: #183e32;
-	--green-deep: #0d1f19;
-	--green-light: #275943;
-	--accent: #ff6f4f;
-	--accent-deep: #e85a3c;
-	--accent-soft: #ffe4da;
-	--soft: #f2f4f0;
+	/* Brand palette — indigo/slate base with a violet-to-blue gradient accent (kept the same
+	   custom-property names as the original green/coral palette so every component built against
+	   var(--green)/var(--accent) repaints automatically; only the values changed). */
+	--green: #312e81;
+	--green-deep: #14123a;
+	--green-light: #4338ca;
+	--accent: #6366f1;
+	--accent-deep: #2563eb;
+	--accent-soft: #e3e2fd;
+	--soft: #f0f0fa;
 
 	/* Elevation scale — layered, low-saturation shadows so cards/menus read as physically
 	   lifted rather than flat-with-a-border. Used consistently instead of ad hoc box-shadows. */
-	--shadow-xs: 0 1px 2px rgba(15, 30, 24, 0.05);
-	--shadow-sm: 0 1px 3px rgba(15, 30, 24, 0.06), 0 1px 2px rgba(15, 30, 24, 0.04);
-	--shadow-md: 0 8px 20px -6px rgba(15, 30, 24, 0.12), 0 2px 6px rgba(15, 30, 24, 0.05);
-	--shadow-lg: 0 20px 44px -12px rgba(15, 30, 24, 0.18), 0 6px 16px rgba(15, 30, 24, 0.06);
-	--shadow-glow: 0 10px 28px -8px rgba(255, 111, 79, 0.38);
+	--shadow-xs: 0 1px 2px rgba(20, 18, 58, 0.05);
+	--shadow-sm: 0 1px 3px rgba(20, 18, 58, 0.07), 0 1px 2px rgba(20, 18, 58, 0.04);
+	--shadow-md: 0 8px 20px -6px rgba(20, 18, 58, 0.14), 0 2px 6px rgba(20, 18, 58, 0.05);
+	--shadow-lg: 0 20px 44px -12px rgba(20, 18, 58, 0.2), 0 6px 16px rgba(20, 18, 58, 0.07);
+	--shadow-glow: 0 10px 28px -8px rgba(99, 102, 241, 0.45);
 
 	--radius-sm: 8px;
 	--radius-md: 12px;
@@ -47,8 +50,8 @@ body {
 }
 body {
 	background-image:
-		radial-gradient(680px circle at 8% -8%, rgba(24, 62, 50, 0.06), transparent 60%),
-		radial-gradient(560px circle at 100% 0%, rgba(255, 111, 79, 0.05), transparent 55%);
+		radial-gradient(680px circle at 8% -8%, rgba(49, 46, 129, 0.07), transparent 60%),
+		radial-gradient(560px circle at 100% 0%, rgba(99, 102, 241, 0.06), transparent 55%);
 	background-attachment: fixed;
 }
 button,
@@ -250,8 +253,8 @@ button:active {
 	position: fixed;
 	width: 236px;
 	height: 100vh;
-	background: linear-gradient(175deg, #16463a 0%, #0f2f27 60%, var(--green-deep) 100%);
-	color: #d9e6df;
+	background: linear-gradient(175deg, var(--green-light) 0%, var(--green) 55%, var(--green-deep) 100%);
+	color: #d4d5f4;
 	padding: 28px 18px 20px;
 	display: flex;
 	flex-direction: column;
@@ -275,7 +278,7 @@ button:active {
 	border-radius: 10px;
 	background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
 	color: white;
-	box-shadow: 0 4px 12px rgba(255, 111, 79, 0.4);
+	box-shadow: 0 4px 14px rgba(99, 102, 241, 0.5);
 }
 .nav {
 	margin-top: 42px;
@@ -284,13 +287,14 @@ button:active {
 	text-transform: uppercase;
 	letter-spacing: 1.4px;
 	font-size: 10px;
-	color: #7fa095;
+	color: #8f90cf;
 	padding: 0 12px;
 	margin-bottom: 10px;
 }
 .nav a,
 .sidebar-bottom > a,
-.sidebar-bottom > button {
+.sidebar-bottom > button,
+.user-card {
 	position: relative;
 	height: 46px;
 	display: flex;
@@ -299,7 +303,7 @@ button:active {
 	padding: 0 12px;
 	border-radius: 9px;
 	text-decoration: none;
-	color: #a9c1b8;
+	color: #b3b4e8;
 	font-size: 14px;
 	font-weight: 500;
 	margin: 3px 0;
@@ -310,34 +314,39 @@ button:active {
 	cursor: pointer;
 	font-family: inherit;
 }
-.nav a svg, .sidebar-bottom > a svg, .sidebar-bottom > button svg {
+.nav a svg, .sidebar-bottom > a svg, .sidebar-bottom > button svg, .user-card svg {
+	position: relative;
+	z-index: 1;
 	transition: transform var(--dur-base) var(--ease-spring);
+}
+.nav a span, .sidebar-bottom > a span {
+	position: relative;
+	z-index: 1;
 }
 .nav a:hover svg, .sidebar-bottom > a:hover svg, .sidebar-bottom > button:hover svg {
 	transform: translateX(2px) scale(1.05);
 }
 .nav a:hover,
 .sidebar-bottom > a:hover,
-.sidebar-bottom > button:hover {
+.sidebar-bottom > button:hover,
+.user-card:hover,
+.user-card.open {
 	background: rgba(255, 255, 255, 0.06);
 	color: #fff;
 }
+.user-card.open svg:last-child {
+	transform: rotate(180deg);
+}
 .nav a.active {
-	background: linear-gradient(90deg, rgba(255, 111, 79, 0.18) 0%, rgba(255, 111, 79, 0.05) 100%);
 	color: #fff;
 	font-weight: 650;
 }
-.nav a.active::before {
-	content: "";
+.nav-active {
 	position: absolute;
-	left: -6px;
-	top: 50%;
-	transform: translateY(-50%);
-	width: 3px;
-	height: 20px;
-	border-radius: 3px;
-	background: var(--accent);
-	box-shadow: 0 0 10px 1px rgba(255, 111, 79, 0.7);
+	inset: 0;
+	border-radius: 9px;
+	background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+	box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
 }
 .nav b {
 	margin-left: auto;
@@ -350,7 +359,7 @@ button:active {
 	margin-top: auto;
 }
 .user-card {
-	border-top: 1px solid #31574c;
+	border-top: 1px solid rgba(255, 255, 255, 0.12);
 	margin-top: 14px;
 	padding: 20px 5px 0;
 	display: flex;
@@ -371,10 +380,46 @@ button:active {
 }
 .user-card small {
 	font-size: 10px;
-	color: #85a49a;
+	color: #9d9fd9;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+.user-menu {
+	position: relative;
+}
+.user-dropdown {
+	position: absolute;
+	bottom: calc(100% + 8px);
+	left: 0;
+	right: 0;
+	background: #fff;
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-lg);
+	border: 1px solid var(--line);
+	overflow: hidden;
+	transform-origin: bottom center;
+	z-index: 30;
+}
+.user-dropdown a,
+.user-dropdown button {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	padding: 11px 14px;
+	border: 0;
+	background: transparent;
+	text-align: left;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--ink);
+	text-decoration: none;
+	cursor: pointer;
+}
+.user-dropdown a:hover,
+.user-dropdown button:hover {
+	background: var(--soft);
 }
 .main {
 	grid-column: 2;
@@ -906,6 +951,10 @@ a.project-card:hover {
 	background: #dceee4;
 	color: #347458;
 }
+.avatar-indigo {
+	background: #e3e2fd;
+	color: #4338ca;
+}
 .avatar i {
 	position: absolute;
 	right: -1px;
@@ -1356,6 +1405,13 @@ a.metric:hover .metric-icon {
 	overflow: auto;
 	padding: 24px 9%;
 	background: #fbfcfa;
+	/* Messenger/WhatsApp-style bottom anchoring: a short conversation hugs the bottom of the
+	   pane (empty space above), instead of starting at the top with empty space below. Long
+	   conversations still scroll normally — this only affects how content settles when it's
+	   shorter than the visible area. */
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
 }
 .day-divider {
 	text-align: center;
@@ -2574,12 +2630,6 @@ a.attachment-chip {
 	font-weight: 600;
 	font-size: 11px;
 }
-button.user-card {
-	border: 0;
-	background: transparent;
-	width: 100%;
-	text-align: left;
-}
 .password-field {
 	position: relative;
 }
@@ -2980,6 +3030,11 @@ button.user-card {
 .app-shell:has(.chat-layout) { height: 100dvh; min-height: 0; }
 .main:has(.chat-layout) { display: flex; flex-direction: column; min-height: 0; height: 100dvh; }
 .main:has(.chat-layout) .topbar { flex: 0 0 auto; }
+/* The page-transition wrapper (.shell-content, an animated motion.div AppShell renders around
+   every page's content) sits between .main and .chat-layout — it must also stretch to fill the
+   remaining flex space and be a column itself, or .chat-layout's own height:auto/flex:1 has
+   nothing real to size against, and the whole page scrolls instead of just the message list. */
+.main:has(.chat-layout) .shell-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .main .chat-layout { flex: 1; height: auto; min-height: 0; }
 .settings-form .password-field input { padding-right: 46px; }
 .share-dialog .password-toggle { padding: 0; justify-content: center; border: 0; background: transparent; }
@@ -3173,7 +3228,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid #4e7c6d; outline-offs
 	.app-shell:has(.chat-layout) .sidebar { flex-shrink: 0; max-height: 50dvh; overflow-y: auto; }
 	.sidebar { position: relative; width: 100%; height: auto; padding: 10px 18px; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; overflow: visible; }
 	.sidebar .brand { padding: 0; }
-	.mobile-menu-toggle { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #53776b; border-radius: 9px; background: transparent; color: #fff; }
+	.mobile-menu-toggle { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 9px; background: transparent; color: #fff; }
 	.sidebar .nav, .sidebar .sidebar-bottom { display: none; }
 	.app-shell:has(.sidebar.menu-open)::before { content: ""; display: block; height: 64px; flex-shrink: 0; }
 	.sidebar.menu-open,
